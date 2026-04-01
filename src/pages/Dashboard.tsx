@@ -23,7 +23,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// 🔴 1. TIPAGENS DO TYPESCRIPT (Adeus aos erros de 'any')
 interface Chamado {
   id: number;
   categoria: string;
@@ -39,16 +38,24 @@ interface ChartItem {
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  // 🔴 LÊ O CRACHÁ DO UTILIZADOR
+  const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
+  const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
+
   const [kpis, setKpis] = useState({ total: 0, resolvidos: 0 });
   const [graficoSetores, setGraficoSetores] = useState<ChartItem[]>([]);
   const [graficoStatus, setGraficoStatus] = useState<ChartItem[]>([]);
 
-  // 🔴 2. A FUNÇÃO AGORA ESTÁ EM CIMA (O JavaScript consegue lê-la antes de executar)
   const carregarEstatisticas = async () => {
     try {
-      const response = await axios.get(
-        "http://192.168.1.17:8080/api/solicitacoes/todas",
-      );
+      // 🔴 DECIDE QUAL ROTA CHAMAR BASEADO NO CARGO
+      let url = "http://192.168.1.17:8080/api/solicitacoes/todas";
+
+      if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
+        url = `http://192.168.1.17:8080/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}`;
+      }
+
+      const response = await axios.get(url);
       const chamados: Chamado[] = response.data;
 
       const totalChamados = chamados.length;
@@ -88,20 +95,40 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    // 🔴 SEGURANÇA: Chuta quem não tem login
+    if (!usuarioLogado.id) {
+      navigate("/");
+      return;
+    }
     // eslint-disable-next-line
     carregarEstatisticas();
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("user_ipora");
+    navigate("/");
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
-      {/* MENU LATERAL (SIDEBAR) */}
+      {/* MENU LATERAL */}
       <aside className="w-64 bg-white shadow-md flex flex-col z-10">
-        {/* 🔴 4. Usando o text-primary como o Tailwind sugeriu */}
-        <div className="p-6 flex items-center gap-3 text-primary">
-          <Building2 size={32} />
-          <span className="text-xl font-bold">Iporã Gestão</span>
+        <div className="p-6 flex flex-col gap-1">
+          <div className="flex items-center gap-3 text-primary mb-2">
+            <Building2 size={32} />
+            <span className="text-xl font-bold">Iporã Gestão</span>
+          </div>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            {isSuperAdmin
+              ? "ADMINISTRAÇÃO GERAL"
+              : `SETOR: ${usuarioLogado.setorAtuacao}`}
+          </span>
+          <span className="text-sm text-gray-600 font-medium">
+            Olá, {usuarioLogado.nome}
+          </span>
         </div>
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+
+        <nav className="flex-1 px-4 space-y-2 mt-2">
           <a
             href="#"
             onClick={(e) => {
@@ -112,7 +139,6 @@ export default function Dashboard() {
           >
             <MapPin size={20} /> Solicitações
           </a>
-          {/* DASHBOARD ATIVO (AZUL) */}
           <a
             href="#"
             onClick={(e) => {
@@ -123,16 +149,21 @@ export default function Dashboard() {
           >
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/perfis");
-            }}
-            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <Users size={20} /> Gestão de Perfis
-          </a>
+
+          {/* 🔴 ESCONDE O MENU SE NÃO FOR ADMIN */}
+          {isSuperAdmin && (
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/perfis");
+              }}
+              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Users size={20} /> Gestão de Perfis
+            </a>
+          )}
+
           <a
             href="#"
             onClick={(e) => e.preventDefault()}
@@ -141,9 +172,10 @@ export default function Dashboard() {
             <Settings size={20} /> Definições
           </a>
         </nav>
+
         <div className="p-4 border-t border-gray-100">
           <button
-            onClick={() => navigate("/")}
+            onClick={handleLogout}
             className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors w-full"
           >
             <LogOut size={20} /> Terminar Sessão
@@ -156,7 +188,9 @@ export default function Dashboard() {
         <header className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
-              Visão Geral da Cidade
+              {isSuperAdmin
+                ? "Visão Geral da Cidade"
+                : `Gráficos: ${usuarioLogado.setorAtuacao}`}
             </h1>
             <p className="text-gray-500">
               Dados processados em tempo real diretamente da base de dados.
@@ -201,7 +235,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ÁREA DOS GRÁFICOS */}
+        {/* GRÁFICOS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-800 mb-6">
@@ -228,7 +262,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-gray-400">
-                  Aguardando dados...
+                  Sem dados para exibir
                 </div>
               )}
             </div>
@@ -254,7 +288,6 @@ export default function Dashboard() {
                         if (entry.name === "RESOLVIDO") color = "#4CAF50";
                         if (entry.name === "EM ANDAMENTO") color = "#FFC107";
                         if (entry.name === "PENDENTE") color = "#F44336";
-
                         return <Cell key={`cell-${index}`} fill={color} />;
                       })}
                     </Pie>
@@ -268,7 +301,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-gray-400">
-                  Aguardando dados...
+                  Sem dados para exibir
                 </div>
               )}
             </div>

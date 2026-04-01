@@ -14,7 +14,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// 🔴 Adicionamos mais campos que vêm do Java
 interface Chamado {
   id: number;
   categoria: string;
@@ -31,7 +30,11 @@ export default function Solicitacoes() {
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ESTADOS DA MODAL
+  // 🔴 1. LÊ O CRACHÁ DO UTILIZADOR LOGADO
+  const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
+  const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
+
+  // Estados da Modal
   const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(
     null,
   );
@@ -41,14 +44,24 @@ export default function Solicitacoes() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    // Se por acaso alguém tentar entrar na página sem fazer login, é chutado para fora!
+    if (!usuarioLogado.id) {
+      navigate("/");
+      return;
+    }
     carregarChamados();
   }, []);
 
   const carregarChamados = async () => {
     try {
-      const response = await axios.get(
-        "http://192.168.1.17:8080/api/solicitacoes/todas",
-      );
+      // 🔴 2. SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE!
+      let url = "http://192.168.1.17:8080/api/solicitacoes/todas";
+
+      if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
+        url = `http://192.168.1.17:8080/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}`;
+      }
+
+      const response = await axios.get(url);
       setChamados(response.data.reverse());
     } catch (error) {
       console.error("Erro ao buscar solicitações:", error);
@@ -67,7 +80,6 @@ export default function Solicitacoes() {
     );
   };
 
-  // 🔴 MÁGICA DA IMAGEM (Igual no Telemóvel)
   const getImagemUrl = (urlOriginal?: string) => {
     if (!urlOriginal) return null;
     return urlOriginal.replace(
@@ -76,7 +88,6 @@ export default function Solicitacoes() {
     );
   };
 
-  // ABRE A MODAL E PREENCHE OS DADOS
   const abrirDetalhes = (chamado: Chamado) => {
     setChamadoSelecionado(chamado);
     setNovoStatus(chamado.status);
@@ -84,21 +95,19 @@ export default function Solicitacoes() {
     setNovaResposta(chamado.resposta || "");
   };
 
-  // 🔴 SALVA AS ALTERAÇÕES NO JAVA
   const handleSalvarAtualizacao = async () => {
     if (!chamadoSelecionado) return;
     setIsSaving(true);
     try {
       const url = `http://192.168.1.17:8080/api/solicitacoes/${chamadoSelecionado.id}`;
       await axios.put(url, {
-        status: novoStatus.replace(" ", "_"), // Java usa underline
+        status: novoStatus.replace(" ", "_"),
         categoria: novoSetor,
         resposta: novaResposta,
       });
-
       alert("Solicitação atualizada com sucesso!");
-      setChamadoSelecionado(null); // Fecha a modal
-      carregarChamados(); // Atualiza a tabela
+      setChamadoSelecionado(null);
+      carregarChamados();
     } catch (error) {
       console.error(error);
       alert("Erro ao atualizar a solicitação.");
@@ -107,16 +116,32 @@ export default function Solicitacoes() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("user_ipora"); // Apaga o crachá ao sair
+    navigate("/");
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* MENU LATERAL */}
       <aside className="w-64 bg-white shadow-md flex flex-col z-10">
-        <div className="p-6 flex items-center gap-3 text-primary">
-          <Building2 size={32} />
-          <span className="text-xl font-bold">Iporã Gestão</span>
+        <div className="p-6 flex flex-col gap-1">
+          <div className="flex items-center gap-3 text-primary mb-2">
+            <Building2 size={32} />
+            <span className="text-xl font-bold">Iporã Gestão</span>
+          </div>
+          {/* 🔴 MOSTRA QUEM ESTÁ LOGADO E O SETOR DELE */}
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            {isSuperAdmin
+              ? "ADMINISTRAÇÃO GERAL"
+              : `SETOR: ${usuarioLogado.setorAtuacao}`}
+          </span>
+          <span className="text-sm text-gray-600 font-medium">
+            Olá, {usuarioLogado.nome}
+          </span>
         </div>
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          {/* SOLICITAÇÕES ATIVO (AZUL) */}
+
+        <nav className="flex-1 px-4 space-y-2 mt-2">
           <a
             href="#"
             onClick={(e) => {
@@ -137,16 +162,21 @@ export default function Solicitacoes() {
           >
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/perfis");
-            }}
-            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <Users size={20} /> Gestão de Perfis
-          </a>
+
+          {/* 🔴 3. ESCONDE O MENU DE PERFIS SE NÃO FOR ADMIN */}
+          {isSuperAdmin && (
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/perfis");
+              }}
+              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Users size={20} /> Gestão de Perfis
+            </a>
+          )}
+
           <a
             href="#"
             onClick={(e) => e.preventDefault()}
@@ -155,9 +185,10 @@ export default function Solicitacoes() {
             <Settings size={20} /> Definições
           </a>
         </nav>
+
         <div className="p-4 border-t border-gray-100">
           <button
-            onClick={() => navigate("/")}
+            onClick={handleLogout}
             className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors w-full"
           >
             <LogOut size={20} /> Terminar Sessão
@@ -170,7 +201,9 @@ export default function Solicitacoes() {
         <header className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
-              Gestão de Solicitações
+              {isSuperAdmin
+                ? "Todas as Solicitações"
+                : `Chamados: ${usuarioLogado.setorAtuacao}`}
             </h1>
             <p className="text-gray-500">
               Administre e responda aos chamados da população.
@@ -199,7 +232,6 @@ export default function Solicitacoes() {
                   <th className="p-4 font-semibold">Setor</th>
                   <th className="p-4 font-semibold">Localização</th>
                   <th className="p-4 font-semibold">Status</th>
-                  {/* 🔴 Removida a coluna de Ações */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -217,7 +249,6 @@ export default function Solicitacoes() {
                   </tr>
                 ) : (
                   chamados.map((chamado) => (
-                    // 🔴 MÁGICA AQUI: O onClick foi para a linha (tr), adicionamos cursor-pointer e hover:bg-blue-50
                     <tr
                       key={chamado.id}
                       onClick={() => abrirDetalhes(chamado)}
@@ -251,7 +282,6 @@ export default function Solicitacoes() {
                             : "PENDENTE"}
                         </span>
                       </td>
-                      {/* 🔴 Removido o td do botão do olhinho */}
                     </tr>
                   ))
                 )}
@@ -261,13 +291,10 @@ export default function Solicitacoes() {
         </div>
       </main>
 
-      {/* ========================================== */}
-      {/* 🔴 SUPER MODAL DE DETALHES DO CHAMADO      */}
-      {/* ========================================== */}
+      {/* SUPER MODAL (MANTIDA IGUAL) */}
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-            {/* Cabeçalho da Modal */}
             <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">
@@ -285,10 +312,8 @@ export default function Solicitacoes() {
               </button>
             </div>
 
-            {/* Corpo da Modal (Dividido em 2 Colunas) */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* LADO ESQUERDO: Mídias e Localização */}
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -319,7 +344,6 @@ export default function Solicitacoes() {
                     <p className="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3">
                       {chamadoSelecionado.localizacao}
                     </p>
-                    {/* MÁGICA: MAPA DO GOOGLE INCORPORADO */}
                     <div className="w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
                       <iframe
                         width="100%"
@@ -333,7 +357,6 @@ export default function Solicitacoes() {
                   </div>
                 </div>
 
-                {/* LADO DIREITO: Gestão e Ações */}
                 <div className="space-y-6 flex flex-col">
                   <div>
                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -351,7 +374,6 @@ export default function Solicitacoes() {
                     <h3 className="text-lg font-bold text-gray-800 mb-4">
                       Ações do Setor
                     </h3>
-
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -367,7 +389,6 @@ export default function Solicitacoes() {
                           <option value="RESOLVIDO">Resolvido</option>
                         </select>
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Transferir Setor
@@ -392,22 +413,19 @@ export default function Solicitacoes() {
                         </select>
                       </div>
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Resposta Oficial (Visível no Celular do Cidadão)
+                        Resposta Oficial
                       </label>
                       <textarea
                         rows={4}
                         value={novaResposta}
                         onChange={(e) => setNovaResposta(e.target.value)}
-                        placeholder="Ex: A equipe já foi enviada ao local para averiguação..."
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"
                       ></textarea>
                     </div>
                   </div>
 
-                  {/* Botões de Ação Final */}
                   <div className="mt-auto flex gap-3 pt-6 border-t border-gray-100">
                     <button
                       onClick={() => setChamadoSelecionado(null)}
