@@ -150,7 +150,7 @@ export default function Dashboard() {
             <LayoutDashboard size={20} /> Dashboard
           </a>
 
-          {/* 🔴 ESCONDE O MENU SE NÃO FOR ADMIN */}
+          {/*  ESCONDE O MENU SE NÃO FOR ADMIN */}
           {isSuperAdmin && (
             <a
               href="#"
@@ -166,7 +166,10 @@ export default function Dashboard() {
 
           <a
             href="#"
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/definicoes");
+            }}
             className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <Settings size={20} /> Definições

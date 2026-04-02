@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Solicitacoes from "./pages/Solicitacoes";
-import GestaoPerfis from "./pages/GestaoPerfis"; // 🔴 Importou aqui
+import GestaoPerfis from "./pages/GestaoPerfis";
+import Definicoes from "./pages/Definicoes"; //
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/solicitacoes" element={<Solicitacoes />} />
         <Route path="/perfis" element={<GestaoPerfis />} />{" "}
+        <Route path="/definicoes" element={<Definicoes />} />
       </Routes>
     </BrowserRouter>
   );

@@ -98,7 +98,14 @@ export default function GestaoPerfis() {
           <a href="#" onClick={() => navigate('/perfis')} className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors">
             <Users size={20} /> Gestão de Perfis
           </a>
-          <a href="#" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/definicoes");
+            }}
+            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+          >
             <Settings size={20} /> Definições
           </a>
         </nav>
