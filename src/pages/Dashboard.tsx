@@ -38,22 +38,23 @@ interface ChartItem {
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // 🔴 LÊ O CRACHÁ DO UTILIZADOR
+  //  LÊ O CRACHÁ DO UTILIZADOR
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
-
+  const cidadeAdmin = usuarioLogado.cidade;
   const [kpis, setKpis] = useState({ total: 0, resolvidos: 0 });
   const [graficoSetores, setGraficoSetores] = useState<ChartItem[]>([]);
   const [graficoStatus, setGraficoStatus] = useState<ChartItem[]>([]);
 
   const carregarEstatisticas = async () => {
     try {
-      // 🔴 DECIDE QUAL ROTA CHAMAR BASEADO NO CARGO
-      let url = "http://192.168.1.17:8080/api/solicitacoes/todas";
+      //DECIDE QUAL ROTA CHAMAR BASEADO NO CARGO
+      let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
-      if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
-        url = `http://192.168.1.17:8080/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}`;
-      }
+  if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
+    // Se for funcionário, pega do setor DELE, na cidade DELE
+    url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}?cidade=${cidadeAdmin}`;
+  }
 
       const response = await axios.get(url);
       const chamados: Chamado[] = response.data;

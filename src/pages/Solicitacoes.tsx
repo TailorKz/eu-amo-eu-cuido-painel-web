@@ -33,7 +33,7 @@ export default function Solicitacoes() {
   // 🔴 1. LÊ O CRACHÁ DO UTILIZADOR LOGADO
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
-
+  const cidadeAdmin = usuarioLogado.cidade;
   // Estados da Modal
   const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(
     null,
@@ -54,12 +54,13 @@ export default function Solicitacoes() {
 
   const carregarChamados = async () => {
     try {
-      // 🔴 2. SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE!
-      let url = "http://192.168.1.17:8080/api/solicitacoes/todas";
+      //  SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE!
+      let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
       if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
-        url = `http://192.168.1.17:8080/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}`;
-      }
+    // Se for funcionário, pega do setor DELE, na cidade DELE
+    url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}?cidade=${cidadeAdmin}`;
+  }
 
       const response = await axios.get(url);
       setChamados(response.data.reverse());
@@ -84,7 +85,7 @@ export default function Solicitacoes() {
     if (!urlOriginal) return null;
     return urlOriginal.replace(
       "file:///C:/ipora_imagens/",
-      "http://192.168.1.17:8080/imagens/",
+      "https://tailorkz-production-eu-amo.up.railway.app/imagens/",
     );
   };
 
@@ -99,7 +100,7 @@ export default function Solicitacoes() {
     if (!chamadoSelecionado) return;
     setIsSaving(true);
     try {
-      const url = `http://192.168.1.17:8080/api/solicitacoes/${chamadoSelecionado.id}`;
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamadoSelecionado.id}`;
       await axios.put(url, {
         status: novoStatus.replace(" ", "_"),
         categoria: novoSetor,

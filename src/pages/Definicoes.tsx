@@ -17,7 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// 🔴 NOVA INTERFACE PARA O SETOR
+// INTERFACE PARA O SETOR
 interface Setor {
   id: number;
   nome: string;
@@ -29,7 +29,7 @@ export default function Definicoes() {
 
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
-
+  const cidadeAdmin = usuarioLogado.cidade;
   // ESTADOS DA CONFIGURAÇÃO GERAL
   const [imagemFundoLogin, setImagemFundoLogin] = useState("");
   const [tituloPopUp, setTituloPopUp] = useState("");
@@ -39,7 +39,7 @@ export default function Definicoes() {
   const [tokenTwilio, setTokenTwilio] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // 🔴 ESTADOS PARA OS SETORES
+  //  ESTADOS PARA OS SETORES
   const [setores, setSetores] = useState<Setor[]>([]);
   const [novoSetorNome, setNovoSetorNome] = useState("");
   const [novoSetorIcone, setNovoSetorIcone] = useState("");
@@ -51,13 +51,14 @@ export default function Definicoes() {
       return;
     }
     carregarConfiguracoes();
-    carregarSetores(); // 🔴 CARREGA OS SETORES AO ABRIR
+    carregarSetores(); // CARREGA OS SETORES AO ABRIR
   }, []);
 
   const carregarConfiguracoes = async () => {
     try {
+      // Passa a cidade na URL
       const response = await axios.get(
-        "http://192.168.1.17:8080/api/configuracoes",
+        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeAdmin}`,
       );
       const config = response.data;
 
@@ -76,10 +77,13 @@ export default function Definicoes() {
     }
   };
 
-  // 🔴 BUSCA OS SETORES DO JAVA
+  // BUSCA OS SETORES DO JAVA
   const carregarSetores = async () => {
     try {
-      const response = await axios.get("http://192.168.1.17:8080/api/setores");
+      // 🔴 NOVO: Passa a cidade na URL
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeAdmin}`,
+      );
       setSetores(response.data);
     } catch (error) {
       console.error("Erro ao carregar setores:", error);
@@ -89,14 +93,18 @@ export default function Definicoes() {
   const handleSalvar = async () => {
     setIsSaving(true);
     try {
-      await axios.put("http://192.168.1.17:8080/api/configuracoes", {
-        imagemFundoLogin,
-        tituloPopUp,
-        mensagemPopUp,
-        popUpAtivo,
-        popUpApenasUmaVez,
-        tokenTwilio,
-      });
+      // Passa a cidade na URL do PUT
+      await axios.put(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeAdmin}`,
+        {
+          imagemFundoLogin,
+          tituloPopUp,
+          mensagemPopUp,
+          popUpAtivo,
+          popUpApenasUmaVez,
+          tokenTwilio,
+        },
+      );
       alert("Configurações guardadas com sucesso!");
     } catch (error) {
       console.error(error);
@@ -106,21 +114,24 @@ export default function Definicoes() {
     }
   };
 
-  // 🔴 ADICIONA UM NOVO SETOR
+  //  ADICIONA UM NOVO SETOR
   const handleAdicionarSetor = async () => {
-    if (!novoSetorNome || !novoSetorIcone) {
-      alert("Preencha o nome e o ícone do setor.");
-      return;
-    }
+    if (!novoSetorNome || !novoSetorIcone)
+      return alert("Preencha o nome e o ícone do setor.");
+
     setIsSavingSetor(true);
     try {
-      await axios.post("http://192.168.1.17:8080/api/setores", {
-        nome: novoSetorNome,
-        icone: novoSetorIcone,
-      });
+      await axios.post(
+        "https://tailorkz-production-eu-amo.up.railway.app/api/setores",
+        {
+          nome: novoSetorNome,
+          icone: novoSetorIcone,
+          cidade: cidadeAdmin, //Envia a cidade para o Java salvar no banco!
+        },
+      );
       setNovoSetorNome("");
       setNovoSetorIcone("");
-      carregarSetores(); // Recarrega a lista
+      carregarSetores();
     } catch (error) {
       console.error(error);
       alert("Erro ao adicionar setor.");
@@ -133,7 +144,9 @@ export default function Definicoes() {
   const handleApagarSetor = async (id: number) => {
     if (window.confirm("Tem certeza que deseja apagar este setor?")) {
       try {
-        await axios.delete(`http://192.168.1.17:8080/api/setores/${id}`);
+        await axios.delete(
+          `https://tailorkz-production-eu-amo.up.railway.app/api/setores/${id}`,
+        );
         carregarSetores(); // Recarrega a lista
       } catch (error) {
         console.error(error);
@@ -556,7 +569,7 @@ export default function Definicoes() {
                   ) {
                     try {
                       await axios.post(
-                        `http://192.168.1.17:8080/api/configuracoes/enviar-alerta?titulo=${titulo}&mensagem=${mensagem}`,
+                        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes/enviar-alerta?titulo=${titulo}&mensagem=${mensagem}&cidade=${cidadeAdmin}`,
                       );
                       alert("Alertas disparados com sucesso!");
                       (
