@@ -279,6 +279,7 @@ export default function GestaoPerfis() {
                   <option value="SUPER_ADMIN">
                     Super Admin (Acesso Total)
                   </option>
+                  <option value="VEREADOR">Vereador</option>
                 </select>
               </div>
 

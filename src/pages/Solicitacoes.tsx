@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import Zoom from 'react-medium-image-zoom';
+import 'react-medium-image-zoom/dist/styles.css';
 
 interface Chamado {
   id: number;
@@ -22,6 +24,7 @@ interface Chamado {
   dataCriacao: string;
   observacao?: string;
   urlImagem?: string;
+  urlImagemResolvida?: string;
   resposta?: string;
   cidadao?: {
     nome: string;
@@ -329,22 +332,38 @@ export default function Solicitacoes() {
                     </h3>
                     <div className="w-full h-64 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center">
                       {getImagemUrl(chamadoSelecionado.urlImagem) ? (
-                        <img
-                          src={
-                            getImagemUrl(chamadoSelecionado.urlImagem) as string
-                          }
-                          alt="Foto do Problema"
-                          className="w-full h-full object-cover"
-                        />
+                        <Zoom>
+                          <img
+                            src={getImagemUrl(chamadoSelecionado.urlImagem) as string}
+                            alt="Foto do Problema"
+                            className="w-full h-64 object-cover"
+                          />
+                        </Zoom>
                       ) : (
-                        <span className="text-gray-400 flex flex-col items-center">
+                        <span className="text-gray-400 flex flex-col items-center py-20">
                           <ImageIcon size={32} className="mb-2" />
                           Sem imagem anexada
                         </span>
                       )}
                     </div>
                   </div>
-
+{/* MOSTRA A FOTO DA RESOLUÇÃO PARA O GESTOR/ADMIN COM ZOOM */}
+                  {chamadoSelecionado.urlImagemResolvida && (
+                    <div className="mt-6">
+                      <h3 className="text-sm font-bold text-green-600 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <ImageIcon size={16} /> Foto da Resolução (Funcionário)
+                      </h3>
+                      <div className="w-full bg-green-50 rounded-xl overflow-hidden border border-green-200 flex items-center justify-center">
+                        <Zoom>
+                          <img
+                            src={getImagemUrl(chamadoSelecionado.urlImagemResolvida) as string}
+                            alt="Foto da Resolução"
+                            className="w-full h-64 object-cover"
+                          />
+                        </Zoom>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                       <MapPin size={16} /> Localização Informada
