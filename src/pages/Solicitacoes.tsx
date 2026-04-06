@@ -23,6 +23,10 @@ interface Chamado {
   observacao?: string;
   urlImagem?: string;
   resposta?: string;
+  cidadao?: {
+    nome: string;
+    telefone: string;
+  };
 }
 
 export default function Solicitacoes() {
@@ -367,11 +371,23 @@ export default function Solicitacoes() {
                       <MessageSquare size={16} /> Observação do Cidadão
                     </h3>
                     <p className="text-gray-700 bg-blue-50/50 p-4 rounded-xl border border-blue-100 italic">
-                      "
-                      {chamadoSelecionado.observacao ||
-                        "Nenhuma observação informada."}
-                      "
+                      "{chamadoSelecionado.observacao || "Nenhuma observação informada."}"
                     </p>
+                  </div>
+
+                  {/* 🔴 NOVO: Bloco com os dados de quem reportou */}
+                  <div className="border-t border-gray-100 pt-6">
+                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Users size={16} /> Dados do Solicitante
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                      <p className="text-gray-800 font-bold text-lg">
+                        {chamadoSelecionado.cidadao?.nome || "Cidadão não identificado"}
+                      </p>
+                      <p className="text-gray-600">
+                        {chamadoSelecionado.cidadao?.telefone || "Sem contato"}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="border-t border-gray-100 pt-6">
