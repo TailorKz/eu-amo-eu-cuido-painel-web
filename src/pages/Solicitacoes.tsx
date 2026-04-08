@@ -26,6 +26,7 @@ interface Chamado {
   urlImagem?: string;
   urlImagemResolvida?: string;
   resposta?: string;
+  protocolo?: string;
   cidadao?: {
     nome: string;
     telefone: string;
@@ -238,7 +239,7 @@ export default function Solicitacoes() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 text-sm uppercase tracking-wider">
-                  <th className="p-4 font-semibold">ID</th>
+                  <th className="p-4 font-semibold">Protocolo</th>
                   <th className="p-4 font-semibold">Data e Hora</th>
                   <th className="p-4 font-semibold">Setor</th>
                   <th className="p-4 font-semibold">Localização</th>
@@ -266,8 +267,8 @@ export default function Solicitacoes() {
                       className="hover:bg-blue-50 cursor-pointer transition-colors"
                       title="Clique na linha para ver os detalhes"
                     >
-                      <td className="p-4 text-gray-500 font-medium">
-                        #{chamado.id}
+                      <td className="p-4 text-gray-500 font-bold whitespace-nowrap">
+                        {chamado.protocolo || `#${chamado.id}`}
                       </td>
                       <td className="p-4 text-gray-800">
                         {formatarData(chamado.dataCriacao)}
@@ -309,7 +310,7 @@ export default function Solicitacoes() {
             <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">
-                  Solicitação #{chamadoSelecionado.id}
+                  {chamadoSelecionado.protocolo ? `Protocolo ${chamadoSelecionado.protocolo}` : `Solicitação #${chamadoSelecionado.id}`}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
                   Enviado em: {formatarData(chamadoSelecionado.dataCriacao)}
