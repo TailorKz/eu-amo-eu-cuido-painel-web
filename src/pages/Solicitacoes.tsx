@@ -378,7 +378,8 @@ export default function Solicitacoes() {
                         style={{ border: 0 }}
                         loading="lazy"
                         allowFullScreen
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent(chamadoSelecionado.localizacao + ", Iporã do Oeste")}&output=embed`}
+                        // Agora usa HTTPS e pega a cidade dinâmica do Admin logado!
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent(chamadoSelecionado.localizacao + ", " + usuarioLogado.cidade)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
                       ></iframe>
                     </div>
                   </div>
