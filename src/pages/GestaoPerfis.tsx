@@ -22,12 +22,19 @@ interface Usuario {
   setorAtuacao: string | null;
 }
 
+interface Setor {
+  id: number;
+  nome: string;
+  icone: string;
+}
+
 export default function GestaoPerfis() {
   const navigate = useNavigate();
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const cidadeAdmin = usuarioLogado.cidade;
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
 
   // Estados da Modal
   const [usuarioSelecionado, setUsuarioSelecionado] = useState<Usuario | null>(
@@ -38,19 +45,31 @@ export default function GestaoPerfis() {
   const [isSaving, setIsSaving] = useState(false);
   useEffect(() => {
     carregarUsuarios();
+    carregarSetores();
   }, []);
 
   const carregarUsuarios = async () => {
     try {
       // Rota que busca por cidade
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/cidade/${cidadeAdmin}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/cidade/${cidadeAdmin}`,
       );
       setUsuarios(response.data);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const carregarSetores = async () => {
+    try {
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeAdmin}`,
+      );
+      setSetoresDaCidade(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar setores:", error);
     }
   };
 
@@ -298,13 +317,12 @@ export default function GestaoPerfis() {
                     <option value="" disabled>
                       Selecione um setor...
                     </option>
-                    <option value="Infraestrutura">Infraestrutura</option>
-                    <option value="Iluminação Pública">
-                      Iluminação Pública
-                    </option>
-                    <option value="Urbanismo">Urbanismo</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Saneamento e água">Saneamento e água</option>
+                    {/* cria as opções com base na base de dados */}
+                    {setoresDaCidade.map((setor) => (
+                      <option key={setor.id} value={setor.nome}>
+                        {setor.nome}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}

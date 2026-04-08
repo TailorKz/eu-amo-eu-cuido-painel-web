@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import Zoom from 'react-medium-image-zoom';
-import 'react-medium-image-zoom/dist/styles.css';
+import Zoom from "react-medium-image-zoom";
+import "react-medium-image-zoom/dist/styles.css";
 
 interface Chamado {
   id: number;
@@ -32,16 +32,22 @@ interface Chamado {
     telefone: string;
   };
 }
+interface Setor {
+  id: number;
+  nome: string;
+  icone: string;
+}
 
 export default function Solicitacoes() {
   const navigate = useNavigate();
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🔴 1. LÊ O CRACHÁ DO UTILIZADOR LOGADO
+  // LÊ O CRACHÁ DO UTILIZADOR LOGADO
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
   const cidadeAdmin = usuarioLogado.cidade;
+  const [setoresDaCidade] = useState<Setor[]>([]);
   // Estados da Modal
   const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(
     null,
@@ -66,9 +72,9 @@ export default function Solicitacoes() {
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
       if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
-    // Se for funcionário, pega do setor DELE, na cidade DELE
-    url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}?cidade=${cidadeAdmin}`;
-  }
+        // Se for funcionário, pega do setor DELE, na cidade DELE
+        url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}?cidade=${cidadeAdmin}`;
+      }
 
       const response = await axios.get(url);
       setChamados(response.data.reverse());
@@ -310,7 +316,9 @@ export default function Solicitacoes() {
             <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">
-                  {chamadoSelecionado.protocolo ? `Protocolo ${chamadoSelecionado.protocolo}` : `Solicitação #${chamadoSelecionado.id}`}
+                  {chamadoSelecionado.protocolo
+                    ? `Protocolo ${chamadoSelecionado.protocolo}`
+                    : `Solicitação #${chamadoSelecionado.id}`}
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
                   Enviado em: {formatarData(chamadoSelecionado.dataCriacao)}
@@ -335,7 +343,11 @@ export default function Solicitacoes() {
                       {getImagemUrl(chamadoSelecionado.urlImagem) ? (
                         <Zoom>
                           <img
-                            src={getImagemUrl(chamadoSelecionado.urlImagem) as string}
+                            src={
+                              getImagemUrl(
+                                chamadoSelecionado.urlImagem,
+                              ) as string
+                            }
                             alt="Foto do Problema"
                             className="w-full h-64 object-cover"
                           />
@@ -348,7 +360,7 @@ export default function Solicitacoes() {
                       )}
                     </div>
                   </div>
-{/* MOSTRA A FOTO DA RESOLUÇÃO PARA O GESTOR/ADMIN COM ZOOM */}
+                  {/* MOSTRA A FOTO DA RESOLUÇÃO PARA O GESTOR/ADMIN COM ZOOM */}
                   {chamadoSelecionado.urlImagemResolvida && (
                     <div className="mt-6">
                       <h3 className="text-sm font-bold text-green-600 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -357,7 +369,11 @@ export default function Solicitacoes() {
                       <div className="w-full bg-green-50 rounded-xl overflow-hidden border border-green-200 flex items-center justify-center">
                         <Zoom>
                           <img
-                            src={getImagemUrl(chamadoSelecionado.urlImagemResolvida) as string}
+                            src={
+                              getImagemUrl(
+                                chamadoSelecionado.urlImagemResolvida,
+                              ) as string
+                            }
                             alt="Foto da Resolução"
                             className="w-full h-64 object-cover"
                           />
@@ -392,7 +408,10 @@ export default function Solicitacoes() {
                       <MessageSquare size={16} /> Observação do Cidadão
                     </h3>
                     <p className="text-gray-700 bg-blue-50/50 p-4 rounded-xl border border-blue-100 italic">
-                      "{chamadoSelecionado.observacao || "Nenhuma observação informada."}"
+                      "
+                      {chamadoSelecionado.observacao ||
+                        "Nenhuma observação informada."}
+                      "
                     </p>
                   </div>
 
@@ -403,7 +422,8 @@ export default function Solicitacoes() {
                     </h3>
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                       <p className="text-gray-800 font-bold text-lg">
-                        {chamadoSelecionado.cidadao?.nome || "Cidadão não identificado"}
+                        {chamadoSelecionado.cidadao?.nome ||
+                          "Cidadão não identificado"}
                       </p>
                       <p className="text-gray-600">
                         {chamadoSelecionado.cidadao?.telefone || "Sem contato"}
@@ -439,18 +459,12 @@ export default function Solicitacoes() {
                           onChange={(e) => setNovoSetor(e.target.value)}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                         >
-                          <option value="Infraestrutura">Infraestrutura</option>
-                          <option value="Iluminação Pública">
-                            Iluminação Pública
-                          </option>
-                          <option value="Urbanismo">Urbanismo</option>
-                          <option value="Limpeza">Limpeza</option>
-                          <option value="Saneamento e água">
-                            Saneamento e água
-                          </option>
-                          <option value="Saúde Pública e Vigilância">
-                            Saúde Pública e Vigilância
-                          </option>
+                          {/* A MÁGICA ACONTECE AQUI: Ele cria as opções com base na base de dados */}
+                          {setoresDaCidade.map((setor) => (
+                            <option key={setor.id} value={setor.nome}>
+                              {setor.nome}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>

@@ -7,11 +7,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  // 🔴 NOVO ESTADO: Agora começa vazio (ou com a cidade principal)
+  // Agora começa vazio (ou com a cidade principal)
   const [cidade, setCidade] = useState("Iporã do Oeste");
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🔴 LISTA DE CIDADES (Você pode adicionar quantas cidades fechar contrato!)
+  // LISTA DE CIDADES
   const cidadesAtendidas = [
     "Iporã do Oeste",
     "Itapiranga",

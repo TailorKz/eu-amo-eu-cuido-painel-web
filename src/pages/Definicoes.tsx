@@ -117,7 +117,7 @@ export default function Definicoes() {
   //  ADICIONA UM NOVO SETOR
   const handleAdicionarSetor = async () => {
     if (!novoSetorNome || !novoSetorIcone)
-      return alert("Preencha o nome e o ícone do setor.");
+      return alert("Preencha o nome e o imagem do setor.");
 
     setIsSavingSetor(true);
     try {
@@ -495,7 +495,8 @@ export default function Definicoes() {
                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Cole o link de uma imagem com fundo transparente.
+                    Cole o link de uma imagem com fundo transparente (tamanho
+                    284x277).
                   </p>
                 </div>
                 <button
