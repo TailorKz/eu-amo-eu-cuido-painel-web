@@ -77,7 +77,13 @@ export default function Solicitacoes() {
       }
 
       const response = await axios.get(url);
-      setChamados(response.data.reverse());
+
+// Organiza matematicamente do mais recente para o mais antigo
+const chamadosOrdenados = response.data.sort((a: Chamado, b: Chamado) => {
+  return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
+});
+
+setChamados(chamadosOrdenados);
     } catch (error) {
       console.error("Erro ao buscar solicitações:", error);
     } finally {
@@ -86,14 +92,19 @@ export default function Solicitacoes() {
   };
 
   const formatarData = (dataString: string) => {
-    if (!dataString) return "-";
-    const data = new Date(dataString);
-    return (
-      data.toLocaleDateString("pt-BR") +
-      " às " +
-      data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-    );
-  };
+  if (!dataString) return "-";
+  const data = new Date(dataString);
+  
+  // Força o fuso horário de Brasília
+  return data.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).replace(",", " às");
+};
 
   const getImagemUrl = (urlOriginal?: string) => {
     if (!urlOriginal) return null;

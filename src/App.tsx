@@ -3,7 +3,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Solicitacoes from "./pages/Solicitacoes";
 import GestaoPerfis from "./pages/GestaoPerfis";
-import Definicoes from "./pages/Definicoes"; //
+import Definicoes from "./pages/Definicoes";
 
 function App() {
   return (
