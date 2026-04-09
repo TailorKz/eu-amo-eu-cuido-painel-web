@@ -92,19 +92,20 @@ setChamados(chamadosOrdenados);
   };
 
   const formatarData = (dataString: string) => {
-  if (!dataString) return "-";
-  const data = new Date(dataString);
-  
-  // Força o fuso horário de Brasília
-  return data.toLocaleString("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).replace(",", " às");
-};
+    if (!dataString) return "-";
+    const dataCorrigida = dataString.endsWith('Z') ? dataString : `${dataString}Z`;
+    
+    const data = new Date(dataCorrigida);
+    
+    return data.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).replace(",", " às");
+  };
 
   const getImagemUrl = (urlOriginal?: string) => {
     if (!urlOriginal) return null;
