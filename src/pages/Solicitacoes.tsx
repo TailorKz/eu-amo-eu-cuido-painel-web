@@ -32,6 +32,7 @@ interface Chamado {
     telefone: string;
   };
 }
+
 interface Setor {
   id: number;
   nome: string;
@@ -47,11 +48,10 @@ export default function Solicitacoes() {
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
   const cidadeAdmin = usuarioLogado.cidade;
-  const [setoresDaCidade] = useState<Setor[]>([]);
+  const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
+  
   // Estados da Modal
-  const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(
-    null,
-  );
+  const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(null);
   const [novoStatus, setNovoStatus] = useState("");
   const [novoSetor, setNovoSetor] = useState("");
   const [novaResposta, setNovaResposta] = useState("");
@@ -64,11 +64,13 @@ export default function Solicitacoes() {
       return;
     }
     carregarChamados();
+    carregarSetores(); // 🔴 Agora o painel vai buscar os setores na inicialização
   }, []);
 
+  // 🔴 FUNÇÃO CORRIGIDA: Buscar os chamados
   const carregarChamados = async () => {
     try {
-      //  SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE!
+      // SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE!
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
       if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
@@ -78,16 +80,28 @@ export default function Solicitacoes() {
 
       const response = await axios.get(url);
 
-// Organiza matematicamente do mais recente para o mais antigo
-const chamadosOrdenados = response.data.sort((a: Chamado, b: Chamado) => {
-  return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
-});
+      // Organiza matematicamente do mais recente para o mais antigo
+      const chamadosOrdenados = response.data.sort((a: Chamado, b: Chamado) => {
+        return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
+      });
 
-setChamados(chamadosOrdenados);
+      setChamados(chamadosOrdenados);
     } catch (error) {
       console.error("Erro ao buscar solicitações:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 🔴 NOVA FUNÇÃO: Busca os setores reais da cidade no banco de dados
+  const carregarSetores = async () => {
+    try {
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores/cidade/${cidadeAdmin}`
+      );
+      setSetoresDaCidade(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar os setores:", error);
     }
   };
 
@@ -321,7 +335,7 @@ setChamados(chamadosOrdenados);
         </div>
       </main>
 
-      {/* SUPER MODAL (MANTIDA IGUAL) */}
+      {/* SUPER MODAL */}
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -427,7 +441,7 @@ setChamados(chamadosOrdenados);
                     </p>
                   </div>
 
-                  {/* 🔴 NOVO: Bloco com os dados de quem reportou */}
+                  {/* Bloco com os dados de quem reportou */}
                   <div className="border-t border-gray-100 pt-6">
                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                       <Users size={16} /> Dados do Solicitante

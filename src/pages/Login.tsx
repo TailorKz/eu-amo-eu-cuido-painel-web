@@ -80,7 +80,7 @@ export default function Login() {
           </h1>
           <p className="text-center text-blue-100 text-lg">
             O cuidado com a sua cidade na palma da sua mão. Central de
-            administração e controlo.
+            administração e controle.
           </p>
         </div>
 

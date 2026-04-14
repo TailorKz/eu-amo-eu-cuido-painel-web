@@ -144,7 +144,7 @@ export default function GestaoPerfis() {
           >
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          {/* 🔴 GESTÃO DE PERFIS ATIVADA */}
+          {/*  GESTÃO DE PERFIS ATIVADA */}
           <a
             href="#"
             onClick={() => navigate("/perfis")}
@@ -178,7 +178,7 @@ export default function GestaoPerfis() {
         <header className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
-              Controlo de Acessos
+              Controle de Acessos
             </h1>
             <p className="text-gray-500">
               Defina os cargos e permissões dos utilizadores do sistema.
