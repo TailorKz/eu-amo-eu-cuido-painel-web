@@ -64,13 +64,12 @@ export default function Solicitacoes() {
       return;
     }
     carregarChamados();
-    carregarSetores(); // 🔴 Agora o painel vai buscar os setores na inicialização
+    carregarSetores(); // painel busca os setores na inicialização
   }, []);
 
-  // 🔴 FUNÇÃO CORRIGIDA: Buscar os chamados
   const carregarChamados = async () => {
     try {
-      // SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE!
+      // SE FOR ADMIN, PUXA TUDO. SE NÃO, PUXA SÓ O SETOR DELE
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
       if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
@@ -93,11 +92,11 @@ export default function Solicitacoes() {
     }
   };
 
-  // 🔴 NOVA FUNÇÃO: Busca os setores reais da cidade no banco de dados
+  // busca os setores reais da cidade no banco de dados
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/setores/cidade/${cidadeAdmin}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeAdmin}`
       );
       setSetoresDaCidade(response.data);
     } catch (error) {
@@ -171,7 +170,7 @@ export default function Solicitacoes() {
             <Building2 size={32} />
             <span className="text-xl font-bold">Iporã Gestão</span>
           </div>
-          {/* 🔴 MOSTRA QUEM ESTÁ LOGADO E O SETOR DELE */}
+          {/*  MOSTRA QUEM ESTÁ LOGADO E O SETOR DELE */}
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             {isSuperAdmin
               ? "ADMINISTRAÇÃO GERAL"
@@ -204,7 +203,7 @@ export default function Solicitacoes() {
             <LayoutDashboard size={20} /> Dashboard
           </a>
 
-          {/* 🔴 3. ESCONDE O MENU DE PERFIS SE NÃO FOR ADMIN */}
+          {/* ESCONDE O MENU DE PERFIS SE NÃO FOR ADMIN */}
           {isSuperAdmin && (
             <a
               href="#"
@@ -485,7 +484,7 @@ export default function Solicitacoes() {
                           onChange={(e) => setNovoSetor(e.target.value)}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                         >
-                          {/* A MÁGICA ACONTECE AQUI: Ele cria as opções com base na base de dados */}
+                          <option value="" disabled>Selecione um setor...</option>
                           {setoresDaCidade.map((setor) => (
                             <option key={setor.id} value={setor.nome}>
                               {setor.nome}
