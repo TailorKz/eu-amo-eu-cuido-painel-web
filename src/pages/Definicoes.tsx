@@ -5,7 +5,6 @@ import {
   MapPin,
   Settings,
   LogOut,
-  Building2,
   Save,
   Image as ImageIcon,
   Bell,
@@ -18,6 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+// INTERFACE PARA O SETOR
 interface Setor {
   id: number;
   nome: string;
@@ -31,6 +31,7 @@ export default function Definicoes() {
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
   const cidadeAdmin = usuarioLogado.cidade;
 
+  // ESTADOS DA CONFIGURAÇÃO GERAL
   const [imagemFundoLogin, setImagemFundoLogin] = useState("");
   const [tituloPopUp, setTituloPopUp] = useState("");
   const [mensagemPopUp, setMensagemPopUp] = useState("");
@@ -38,16 +39,19 @@ export default function Definicoes() {
   const [popUpApenasUmaVez, setPopUpApenasUmaVez] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // ESTADOS PARA OS SETORES
   const [setores, setSetores] = useState<Setor[]>([]);
   const [novoSetorNome, setNovoSetorNome] = useState("");
   const [novoSetorIcone, setNovoSetorIcone] = useState("");
   const [isSavingSetor, setIsSavingSetor] = useState(false);
 
+  // ESTADOS PARA PRÉ-APROVAR NÚMERO (Sem Senha)
   const [vipTelefone, setVipTelefone] = useState("");
   const [vipPerfil, setVipPerfil] = useState("CIDADÃO");
   const [vipSetor, setVipSetor] = useState("");
   const [isAuthorizing, setIsAuthorizing] = useState(false);
 
+  // ESTADOS PARA CRIAR CONTA DIRETA (Com Senha)
   const [diretoNome, setDiretoNome] = useState("");
   const [diretoTelefone, setDiretoTelefone] = useState("");
   const [diretoSenha, setDiretoSenha] = useState("");
@@ -81,11 +85,11 @@ export default function Definicoes() {
     }
   };
 
-  //  ROTA DE SETORES CORRIGIDA COM BARRAS
+  // 🔴 ROTA CORRIGIDA: Usa exatamente o endpoint que sabemos que funciona!
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/setores/cidade/${cidadeAdmin}`,
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeAdmin}`
       );
       setSetores(response.data);
     } catch (error) {
@@ -115,7 +119,7 @@ export default function Definicoes() {
     }
   };
 
-  // PRÉ-APROVAR (Apenas Número e Cargo)
+  // FUNÇÃO 1: PRÉ-APROVAR (Apenas Número e Cargo)
   const handlePreAprovarNumero = async () => {
     if (!vipTelefone || vipTelefone.length < 11) return alert("Preencha corretamente o número de celular (11 dígitos)!");
     if ((vipPerfil === "FUNCIONARIO" || vipPerfil === "GESTOR_SETOR") && !vipSetor) return alert("Selecione o Setor de Atuação.");
@@ -146,7 +150,7 @@ export default function Definicoes() {
     }
   };
 
-  // CRIAR CONTA COMPLETA DIRETO
+  // FUNÇÃO 2: CRIAR CONTA COMPLETA DIRETO (Com Senha, ignora SMS)
   const handleCriarUsuarioDireto = async () => {
     if (!diretoNome || !diretoTelefone || !diretoSenha) return alert("Preencha o Nome, Celular e Senha Inicial!");
     if (diretoTelefone.length < 11) return alert("O telefone deve ter 11 dígitos.");
@@ -213,6 +217,17 @@ export default function Definicoes() {
     }
   };
 
+  const logosPorCidade: Record<string, string> = {
+    "Iporã do Oeste": "/logos/logoeuamoipora.png",
+    "Itapiranga": "/logos/logoeuamoipora.png",
+    "São Miguel do Oeste": "/logos/logoeuamoipora.png",
+    "Tunápolis": "/logos/logoeuamoipora.png",
+  };
+
+  // Se a cidade não tiver logo mapeada, ele pode carregar uma genérica
+  const logoAtual = logosPorCidade[cidadeAdmin] || "/logos/logoeuamoipora.png";
+
+
   const handleLogout = () => {
     localStorage.removeItem("user_ipora");
     navigate("/");
@@ -222,9 +237,12 @@ export default function Definicoes() {
     <div className="flex h-screen overflow-hidden bg-gray-100">
       <aside className="w-64 bg-white shadow-md flex flex-col z-10">
         <div className="p-6 flex flex-col gap-1">
-          <div className="flex items-center gap-3 text-primary mb-2">
-            <Building2 size={32} />
-            <span className="text-xl font-bold">Iporã Gestão</span>
+          <div className="flex justify-center items-center mb-4 mt-2">
+            <img 
+              src={logoAtual} 
+              alt={`Eu amo ${cidadeAdmin} eu cuido`} 
+              className="h-16 w-auto object-contain" 
+            />
           </div>
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             ADMINISTRAÇÃO GERAL
@@ -264,12 +282,12 @@ export default function Definicoes() {
           </div>
           <button onClick={handleSalvar} disabled={isSaving} className="flex items-center gap-2 bg-primary hover:bg-primaryDark text-white px-6 py-3 rounded-lg font-bold shadow-md transition-colors disabled:opacity-50">
             <Save size={20} />
-            {isSaving ? "A guardar..." : "Guardar Pop-up/Imagem"}
+            {isSaving ? "A guardar..." : "Salvar Alterações"}
           </button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* POP-UP DE AVISO */}
+          {/* BLOCO 1: POP-UP DE AVISO */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="p-2 bg-amber-50 text-amber-500 rounded-lg">
@@ -307,7 +325,7 @@ export default function Definicoes() {
           </div>
 
           <div className="space-y-8">
-            {/* IMAGEM DE FUNDO */}
+            {/* BLOCO 2: IMAGEM DE FUNDO */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <div className="p-2 bg-blue-50 text-blue-500 rounded-lg">
@@ -325,7 +343,7 @@ export default function Definicoes() {
               </div>
             </div>
 
-            {/* PRÉ-APROVAÇÃO DE NÚMERO */}
+            {/* BLOCO 3: PRÉ-APROVAÇÃO DE NÚMERO */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
                 <div className="p-2 bg-purple-50 text-purple-500 rounded-lg">
@@ -340,16 +358,16 @@ export default function Definicoes() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Celular (Apenas Números)</label>
-                    <input type="text" maxLength={11} value={vipTelefone} onChange={(e) => setVipTelefone(e.target.value.replace(/\D/g, ""))} placeholder="11999999999" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
+                    <input type="text" maxLength={11} value={vipTelefone} onChange={(e) => setVipTelefone(e.target.value.replace(/\D/g, ""))} placeholder="49999999999" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Cargo / Perfil</label>
                     <select value={vipPerfil} onChange={(e) => { setVipPerfil(e.target.value); setVipSetor(""); }} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
-                      <option value="CIDADÃO">Cidadão Comum</option>
-                      <option value="VEREADOR">Vereador / Político</option>
-                      <option value="FUNCIONARIO">Funcionário (Rua)</option>
+                      <option value="CIDADÃO">Cidadão</option>
+                      <option value="VEREADOR">Vereador</option>
+                      <option value="FUNCIONARIO">Funcionário setor</option>
                       <option value="GESTOR_SETOR">Gestor de Setor</option>
-                      <option value="SUPER_ADMIN">Administrador (Prefeito/Vice)</option>
+                      <option value="SUPER_ADMIN">Administrador</option>
                     </select>
                   </div>
                 </div>
@@ -390,7 +408,7 @@ export default function Definicoes() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Celular (Sem espaços)</label>
-                <input type="text" maxLength={11} value={diretoTelefone} onChange={(e) => setDiretoTelefone(e.target.value.replace(/\D/g, ""))} placeholder="11999999999" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                <input type="text" maxLength={11} value={diretoTelefone} onChange={(e) => setDiretoTelefone(e.target.value.replace(/\D/g, ""))} placeholder="49999999999" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Senha Inicial</label>
@@ -399,11 +417,11 @@ export default function Definicoes() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Cargo / Perfil</label>
                 <select value={diretoPerfil} onChange={(e) => { setDiretoPerfil(e.target.value); setDiretoSetor(""); }} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
-                  <option value="CIDADÃO">Cidadão Comum</option>
-                  <option value="VEREADOR">Vereador / Político</option>
-                  <option value="FUNCIONARIO">Funcionário (Rua)</option>
+                  <option value="CIDADÃO">Cidadão</option>
+                  <option value="VEREADOR">Vereador</option>
+                  <option value="FUNCIONARIO">Funcionário Setor</option>
                   <option value="GESTOR_SETOR">Gestor de Setor</option>
-                  <option value="SUPER_ADMIN">Administrador (Prefeito/Vice)</option>
+                  <option value="SUPER_ADMIN">Administrador</option>
                 </select>
               </div>
             </div>
