@@ -18,7 +18,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// INTERFACE PARA O SETOR
 interface Setor {
   id: number;
   nome: string;
@@ -82,10 +81,11 @@ export default function Definicoes() {
     }
   };
 
+  //  ROTA DE SETORES CORRIGIDA COM BARRAS
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeAdmin}`,
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores/cidade/${cidadeAdmin}`,
       );
       setSetores(response.data);
     } catch (error) {

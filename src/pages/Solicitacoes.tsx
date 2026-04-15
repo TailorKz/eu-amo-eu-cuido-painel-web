@@ -96,7 +96,7 @@ export default function Solicitacoes() {
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/setores?cidade=${cidadeAdmin}`
+        `https://tailorkz-production-eu-amo.up.railway.app/api/setores/cidade/${cidadeAdmin}`
       );
       setSetoresDaCidade(response.data);
     } catch (error) {
