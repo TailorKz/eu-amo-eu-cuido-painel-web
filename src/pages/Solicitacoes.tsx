@@ -21,6 +21,8 @@ interface Chamado {
   id: number;
   categoria: string;
   localizacao: string;
+  latitude?: number;
+  longitude?: number;
   status: string;
   dataCriacao: string;
   observacao?: string;
@@ -49,6 +51,7 @@ export default function Solicitacoes() {
   // LÊ O CRACHÁ DO UTILIZADOR LOGADO
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
+  const isPrefeito = usuarioLogado.perfil === "PREFEITO";
   const cidadeAdmin = usuarioLogado.cidade;
   const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
 
@@ -89,7 +92,8 @@ export default function Solicitacoes() {
     try {
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
-      if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
+      // Se NÃO for Super Admin e NÃO for Prefeito, então puxa só do setor dele
+      if (!isSuperAdmin && !isPrefeito && usuarioLogado.setorAtuacao) {
         url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}?cidade=${cidadeAdmin}`;
       }
 
@@ -292,7 +296,7 @@ export default function Solicitacoes() {
               e.preventDefault();
               navigate("/solicitacoes");
             }}
-            className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors"
+            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <MapPin size={20} /> Solicitações
           </a>
@@ -306,33 +310,32 @@ export default function Solicitacoes() {
           >
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          {(isSuperAdmin || usuarioLogado.perfil === "GESTOR_SETOR") && (
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/perfis");
-              }}
-              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <Users size={20} />{" "}
-              {isSuperAdmin ? "Gestão de Perfis" : "Meu Setor"}
-            </a>
-          )}
+          {/* 🔴 SÓ O SUPER ADMIN VÊ ISTO AGORA */}
           {isSuperAdmin && (
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/definicoes");
-              }}
-              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <Settings size={20} /> Definições
-            </a>
+            <>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/perfis");
+                }}
+                className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Users size={20} /> Gestão de Perfis
+              </a>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/definicoes");
+                }}
+                className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Settings size={20} /> Definições
+              </a>
+            </>
           )}
         </nav>
-
         <div className="p-4 border-t border-gray-100">
           <button
             onClick={handleLogout}
@@ -563,7 +566,16 @@ export default function Solicitacoes() {
                         style={{ border: 0 }}
                         loading="lazy"
                         allowFullScreen
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent(chamadoSelecionado.localizacao + ", " + usuarioLogado.cidade)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                        src={`https://maps.google.com/maps?q=${
+                          chamadoSelecionado.latitude &&
+                          chamadoSelecionado.longitude
+                            ? `${chamadoSelecionado.latitude},${chamadoSelecionado.longitude}`
+                            : encodeURIComponent(
+                                chamadoSelecionado.localizacao +
+                                  ", " +
+                                  usuarioLogado.cidade,
+                              )
+                        }&t=&z=16&ie=UTF8&iwloc=&output=embed`}
                       ></iframe>
                     </div>
                   </div>

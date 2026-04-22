@@ -23,7 +23,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// 🔴 Adicionada a dataCriacao para podermos filtrar por tempo!
 interface Chamado {
   id: number;
   categoria: string;
@@ -37,6 +36,7 @@ export default function Dashboard() {
   // LÊ O CRACHÁ DO UTILIZADOR
   const usuarioLogado = JSON.parse(localStorage.getItem("user_ipora") || "{}");
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
+  const isPrefeito = usuarioLogado.perfil === "PREFEITO";
   const cidadeAdmin = usuarioLogado.cidade;
 
   const logosPorCidade: Record<string, string> = {
@@ -58,7 +58,8 @@ export default function Dashboard() {
     try {
       let url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/cidade/${cidadeAdmin}`;
 
-      if (!isSuperAdmin && usuarioLogado.setorAtuacao) {
+      // Se NÃO for Super Admin e NÃO for Prefeito, então puxa só do setor dele
+      if (!isSuperAdmin && !isPrefeito && usuarioLogado.setorAtuacao) {
         url = `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/setor/${usuarioLogado.setorAtuacao}?cidade=${cidadeAdmin}`;
       }
 
@@ -187,34 +188,33 @@ export default function Dashboard() {
               e.preventDefault();
               navigate("/dashboard");
             }}
-            className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors"
+            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          {(isSuperAdmin || usuarioLogado.perfil === "GESTOR_SETOR") && (
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/perfis");
-              }}
-              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <Users size={20} />{" "}
-              {isSuperAdmin ? "Gestão de Perfis" : "Meu Setor"}
-            </a>
-          )}
           {isSuperAdmin && (
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/definicoes");
-              }}
-              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <Settings size={20} /> Definições
-            </a>
+            <>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/perfis");
+                }}
+                className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Users size={20} /> Gestão de Perfis
+              </a>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/definicoes");
+                }}
+                className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Settings size={20} /> Definições
+              </a>
+            </>
           )}
         </nav>
 

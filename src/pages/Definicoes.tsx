@@ -367,6 +367,7 @@ export default function Definicoes() {
                       <option value="VEREADOR">Vereador</option>
                       <option value="FUNCIONARIO">Funcionário setor</option>
                       <option value="GESTOR_SETOR">Gestor de Setor</option>
+                      <option value="PREFEITO">Prefeito (Visão Global)</option>
                       <option value="SUPER_ADMIN">Administrador</option>
                     </select>
                   </div>
@@ -421,6 +422,7 @@ export default function Definicoes() {
                   <option value="VEREADOR">Vereador</option>
                   <option value="FUNCIONARIO">Funcionário Setor</option>
                   <option value="GESTOR_SETOR">Gestor de Setor</option>
+                  <option value="PREFEITO">Prefeito (Visão Global)</option>
                   <option value="SUPER_ADMIN">Administrador</option>
                 </select>
               </div>
