@@ -350,7 +350,7 @@ export default function Definicoes() {
                   <UserCheck size={24} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-800">Autorizar Número VIP</h2>
+                  <h2 className="text-lg font-bold text-gray-800">Autorizar Número Previamente</h2>
                   <p className="text-sm text-gray-500">A pessoa se cadastra pelo App e recebe o cargo.</p>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Building2, Lock, Phone, MapPin } from "lucide-react";
+// Removi o Building2 dos imports, já que agora usaremos a sua imagem
+import { Lock, Phone, MapPin } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -14,9 +15,6 @@ export default function Login() {
   // LISTA DE CIDADES
   const cidadesAtendidas = [
     "Iporã do Oeste",
-    "Itapiranga",
-    "São Miguel do Oeste",
-    "Tunápolis",
   ];
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,13 +23,13 @@ export default function Login() {
 
     try {
       const response = await axios.post(
-    "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login",
-    {
-      telefone: phone.replace(/\D/g, ""), //  REMOVE OS () E - ANTES DE ENVIAR
-      senha: password,
-      cidade: cidade,
-    },
-  );
+        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/login",
+        {
+          telefone: phone.replace(/\D/g, ""),
+          senha: password,
+          cidade: cidade,
+        },
+      );
 
       const usuarioLogado = response.data;
 
@@ -58,23 +56,31 @@ export default function Login() {
       setIsLoading(false);
     }
   };
-// Função que formata o número enquanto o utilizador escreve
+
+  // Função que formata o número enquanto o utilizador escreve
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
     if (val.length > 11) val = val.slice(0, 11); // Limita a 11 dígitos
-    
+
     // Aplica a máscara
     if (val.length > 2) val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
     if (val.length > 10) val = `${val.slice(0, 10)}-${val.slice(10)}`;
-    
+
     setPhone(val);
   };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl flex w-full max-w-4xl overflow-hidden">
         {/* LADO ESQUERDO */}
-        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-blue-400 to-primary p-12 text-white">
-          <Building2 size={80} className="mb-6 opacity-90" />
+        <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-blue-100 to-primary p-12 text-white">
+          
+          <img 
+            src="/logos/logoeuamo.png" 
+            alt="Logo Eu Amo Eu Cuido" 
+            className="w-64 mb-6 drop-shadow-md object-contain"
+          />
+          
           <h1 className="text-4xl font-bold mb-4 text-center">
             Painel de Gestão
           </h1>
