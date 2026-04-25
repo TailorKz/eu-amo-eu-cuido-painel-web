@@ -246,9 +246,14 @@ export default function GestaoPerfis() {
   };
 
   const usuariosFiltrados = usuarios.filter((u) => {
+    // Se o nome for nulo, usamos "Pendente" para não quebrar a busca
+    const nomeSeguro = u.nome || "Pendente";
+    const telefoneSeguro = u.telefone || "";
+
     const matchBusca =
-      u.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
-      u.telefone.includes(termoBusca);
+      nomeSeguro.toLowerCase().includes(termoBusca.toLowerCase()) ||
+      telefoneSeguro.includes(termoBusca);
+      
     if (isSuperAdmin) return matchBusca;
 
     const noMeuSetor = u.setorAtuacao === meuSetor;
@@ -394,14 +399,16 @@ export default function GestaoPerfis() {
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${user.bloqueado ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"}`}
                       >
-                        {user.nome.charAt(0).toUpperCase()}
+                        {/* Se tiver nome pega a 1ª letra, senão coloca um ? */}
+                        {user.nome ? user.nome.charAt(0).toUpperCase() : "?"}
                       </div>
                       <span
                         className={
                           user.bloqueado ? "line-through text-gray-400" : ""
                         }
                       >
-                        {user.nome}
+                        {/* Se não tiver nome, mostra um aviso de Pendente */}
+                        {user.nome || <span className="text-gray-400 italic">Pendente (Aguardando Registo)</span>}
                       </span>
                       {user.bloqueado && (
                         <span
