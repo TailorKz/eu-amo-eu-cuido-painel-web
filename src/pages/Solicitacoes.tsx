@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +11,7 @@ import {
   MessageSquare,
   CalendarDays,
   Filter,
+  Send
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -36,6 +37,13 @@ interface Chamado {
   };
 }
 
+interface MensagemChat {
+  id: number;
+  texto: string;
+  remetente: string;
+  dataHora: string;
+}
+
 interface Setor {
   id: number;
   nome: string;
@@ -54,6 +62,10 @@ export default function Solicitacoes() {
   const isPrefeito = usuarioLogado.perfil === "PREFEITO";
   const cidadeAdmin = usuarioLogado.cidade;
   const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
+
+  const [mensagens, setMensagens] = useState<MensagemChat[]>([]);
+const [novaMensagem, setNovaMensagem] = useState("");
+const [isEnviandoMsg, setIsEnviandoMsg] = useState(false);
 
   // LÓGICA DAS LOGOS DINÂMICAS
   const logosPorCidade: Record<string, string> = {
@@ -78,6 +90,18 @@ export default function Solicitacoes() {
   const [novoSetor, setNovoSetor] = useState("");
   const [novaResposta, setNovaResposta] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  
+
+
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll apenas DENTRO da caixa de mensagens
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [mensagens]);
 
   useEffect(() => {
     if (!usuarioLogado.id) {
@@ -206,6 +230,48 @@ export default function Solicitacoes() {
     setNovoStatus(chamado.status);
     setNovoSetor(chamado.categoria);
     setNovaResposta(chamado.resposta || "");
+    carregarMensagens(chamado.id);
+  };
+
+  const carregarMensagens = async (solicitacaoId: number) => {
+    try {
+      const response = await axios.get(`https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${solicitacaoId}/mensagens`);
+      setMensagens(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar chat:", error);
+    }
+  };
+
+  useEffect(() => {
+    let intervaloWeb: ReturnType<typeof setInterval>;
+    
+    // Se o modal de um chamado estiver aberto, atualiza o chat a cada 5 segundos
+    if (chamadoSelecionado?.id) {
+      intervaloWeb = setInterval(() => {
+        carregarMensagens(chamadoSelecionado.id);
+      }, 5000);
+    }
+
+    return () => clearInterval(intervaloWeb);
+  }, [chamadoSelecionado]);
+
+  const handleEnviarMensagemChat = async () => {
+    if (!novaMensagem.trim() || !chamadoSelecionado) return;
+    setIsEnviandoMsg(true);
+    try {
+      await axios.post(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamadoSelecionado.id}/mensagens`,
+        null,
+        { params: { texto: novaMensagem, remetente: "PREFEITURA" } }
+      );
+      setNovaMensagem("");
+      carregarMensagens(chamadoSelecionado.id); // Atualiza a lista na tela
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao enviar mensagem para o cidadão.");
+    } finally {
+      setIsEnviandoMsg(false);
+    }
   };
 
   // transferir setores
@@ -608,7 +674,65 @@ export default function Solicitacoes() {
                       </p>
                     </div>
                   </div>
+<div className="border-t border-gray-100 pt-6">
+                    <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <MessageSquare size={16} /> Chat com o Cidadão
+                    </h3>
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-80 shadow-sm">
+                      
+                      {/* Área do Histórico com Scroll */}
+                      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 scroll-smooth">
+                        {mensagens.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                            <MessageSquare size={32} className="mb-2 opacity-50" />
+                            <p className="italic text-sm">Nenhuma mensagem no histórico.</p>
+                            <p className="text-xs">Tire dúvidas do cidadão por aqui!</p>
+                          </div>
+                        ) : (
+                          mensagens.map(msg => {
+                            const isPrefeitura = msg.remetente === "PREFEITURA";
+                            return (
+                              <div key={msg.id} className={`flex flex-col w-fit max-w-[85%] ${isPrefeitura ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                                <span className={`text-[11px] font-bold tracking-wide mb-1 ${isPrefeitura ? 'text-primary' : 'text-gray-500'}`}>
+                                  {isPrefeitura ? '🏢 Você' : '👤 Cidadão'}
+                                </span>
+                                <div className={`p-3 rounded-2xl text-sm shadow-sm ${isPrefeitura ? 'bg-primary text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
+                                  {msg.texto}
+                                </div>
+                                <span className="text-[10px] text-gray-400 mt-1 font-medium">
+                                  {new Date(msg.dataHora).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                        
+                      </div>
 
+                      {/* Área de Digitação */}
+                      <div className="p-3 bg-white border-t border-gray-200 flex gap-3 items-center">
+                        <input
+                          type="text"
+                          placeholder="Escreva uma mensagem..."
+                          value={novaMensagem}
+                          onChange={(e) => setNovaMensagem(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleEnviarMensagemChat()}
+                          className="flex-1 px-4 py-2.5 bg-gray-100 border-transparent rounded-full focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                        />
+                        <button
+                          onClick={handleEnviarMensagemChat}
+                          disabled={isEnviandoMsg || !novaMensagem.trim()}
+                          className="bg-primary hover:bg-primaryDark text-white w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-md"
+                        >
+                          {isEnviandoMsg ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Send size={18} className="-ml-1" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                   <div className="border-t border-gray-100 pt-6">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">
                       Ações do Setor
