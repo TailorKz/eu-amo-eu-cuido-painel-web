@@ -13,11 +13,11 @@ import {
   Briefcase,
   Plus,
   Trash2,
+  Menu,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// INTERFACE PARA O SETOR
 interface Setor {
   id: number;
   nome: string;
@@ -31,7 +31,6 @@ export default function Definicoes() {
   const isSuperAdmin = usuarioLogado.perfil === "SUPER_ADMIN";
   const cidadeAdmin = usuarioLogado.cidade;
 
-  // ESTADOS DA CONFIGURAÇÃO GERAL
   const [imagemFundoLogin, setImagemFundoLogin] = useState("");
   const [tituloPopUp, setTituloPopUp] = useState("");
   const [mensagemPopUp, setMensagemPopUp] = useState("");
@@ -39,25 +38,25 @@ export default function Definicoes() {
   const [popUpApenasUmaVez, setPopUpApenasUmaVez] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // ESTADOS PARA OS SETORES
   const [setores, setSetores] = useState<Setor[]>([]);
   const [novoSetorNome, setNovoSetorNome] = useState("");
   const [novoSetorIcone, setNovoSetorIcone] = useState("");
   const [isSavingSetor, setIsSavingSetor] = useState(false);
 
-  // ESTADOS PARA PRÉ-APROVAR NÚMERO (Sem Senha)
   const [vipTelefone, setVipTelefone] = useState("");
   const [vipPerfil, setVipPerfil] = useState("CIDADÃO");
   const [vipSetor, setVipSetor] = useState("");
   const [isAuthorizing, setIsAuthorizing] = useState(false);
 
-  // ESTADOS PARA CRIAR CONTA DIRETA (Com Senha)
   const [diretoNome, setDiretoNome] = useState("");
   const [diretoTelefone, setDiretoTelefone] = useState("");
   const [diretoSenha, setDiretoSenha] = useState("");
   const [diretoPerfil, setDiretoPerfil] = useState("CIDADÃO");
   const [diretoSetor, setDiretoSetor] = useState("");
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+
+  // NOVO: menu drawer mobile
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   useEffect(() => {
     if (!usuarioLogado.id || !isSuperAdmin) {
@@ -74,7 +73,6 @@ export default function Definicoes() {
         `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeAdmin}`,
       );
       const config = response.data;
-
       setImagemFundoLogin(config.imagemFundoLogin || "");
       setTituloPopUp(config.tituloPopUp || "");
       setMensagemPopUp(config.mensagemPopUp || "");
@@ -101,13 +99,7 @@ export default function Definicoes() {
     try {
       await axios.put(
         `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeAdmin}`,
-        {
-          imagemFundoLogin,
-          tituloPopUp,
-          mensagemPopUp,
-          popUpAtivo,
-          popUpApenasUmaVez,
-        },
+        { imagemFundoLogin, tituloPopUp, mensagemPopUp, popUpAtivo, popUpApenasUmaVez },
       );
       alert("Configurações globais guardadas com sucesso!");
     } catch (error) {
@@ -118,26 +110,20 @@ export default function Definicoes() {
     }
   };
 
-  // PRÉ-APROVAR (Apenas Número e Cargo)
   const handlePreAprovarNumero = async () => {
     if (!vipTelefone || vipTelefone.length < 11) return alert("Preencha corretamente o número de celular (11 dígitos)!");
     if ((vipPerfil === "FUNCIONARIO" || vipPerfil === "GESTOR_SETOR") && !vipSetor) return alert("Selecione o Setor de Atuação.");
-
     setIsAuthorizing(true);
     try {
       await axios.post(
         "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/admin-pre-aprovar",
         {
-          telefone: vipTelefone,
-          cidade: cidadeAdmin,
-          perfil: vipPerfil,
+          telefone: vipTelefone, cidade: cidadeAdmin, perfil: vipPerfil,
           setorAtuacao: (vipPerfil === "FUNCIONARIO" || vipPerfil === "GESTOR_SETOR") ? vipSetor : null,
         },
       );
       alert("Número autorizado com sucesso! A pessoa receberá o cargo ao se cadastrar pelo app.");
-      setVipTelefone("");
-      setVipPerfil("CIDADÃO");
-      setVipSetor("");
+      setVipTelefone(""); setVipPerfil("CIDADÃO"); setVipSetor("");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 400) {
         alert("Erro: Este número já tem conta ou já foi autorizado.");
@@ -149,31 +135,22 @@ export default function Definicoes() {
     }
   };
 
-  // RIAR CONTA COMPLETA DIRETO (Com Senha, ignora SMS)
   const handleCriarUsuarioDireto = async () => {
     if (!diretoNome || !diretoTelefone || !diretoSenha) return alert("Preencha o Nome, Celular e Senha Inicial!");
     if (diretoTelefone.length < 11) return alert("O telefone deve ter 11 dígitos.");
     if ((diretoPerfil === "FUNCIONARIO" || diretoPerfil === "GESTOR_SETOR") && !diretoSetor) return alert("Selecione o Setor de Atuação.");
-
     setIsCreatingUser(true);
     try {
       await axios.post(
         "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/admin-criar",
         {
-          nome: diretoNome,
-          telefone: diretoTelefone,
-          senha: diretoSenha,
-          cidade: cidadeAdmin,
+          nome: diretoNome, telefone: diretoTelefone, senha: diretoSenha, cidade: cidadeAdmin,
           perfil: diretoPerfil,
           setorAtuacao: (diretoPerfil === "FUNCIONARIO" || diretoPerfil === "GESTOR_SETOR") ? diretoSetor : null,
         },
       );
       alert("Conta completa criada com sucesso! Pode entregar o número e a senha para o acesso imediato.");
-      setDiretoNome("");
-      setDiretoTelefone("");
-      setDiretoSenha("");
-      setDiretoPerfil("CIDADÃO");
-      setDiretoSetor("");
+      setDiretoNome(""); setDiretoTelefone(""); setDiretoSenha(""); setDiretoPerfil("CIDADÃO"); setDiretoSetor("");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 400) {
         alert("Erro: Este número de celular já está cadastrado.");
@@ -193,8 +170,7 @@ export default function Definicoes() {
         "https://tailorkz-production-eu-amo.up.railway.app/api/setores",
         { nome: novoSetorNome, icone: novoSetorIcone, cidade: cidadeAdmin },
       );
-      setNovoSetorNome("");
-      setNovoSetorIcone("");
+      setNovoSetorNome(""); setNovoSetorIcone("");
       carregarSetores();
     } catch (error) {
       console.error(error);
@@ -222,146 +198,166 @@ export default function Definicoes() {
     "São Miguel do Oeste": "/logos/logoeuamoipora.png",
     "Tunápolis": "/logos/logoeuamoipora.png",
   };
-
-  // Se a cidade não tiver logo mapeada, ele pode carregar uma genérica
   const logoAtual = logosPorCidade[cidadeAdmin] || "/logos/logoeuamoipora.png";
 
-
-  const handleLogout = () => {
-    localStorage.removeItem("user_ipora");
-    navigate("/");
-  };
+  const SidebarContent = () => (
+    <>
+      <div className="p-6 flex flex-col gap-1">
+        <div className="flex justify-center items-center mb-4 mt-2">
+          <img src={logoAtual} alt={`Eu amo ${cidadeAdmin} eu cuido`} className="h-16 w-auto object-contain" />
+        </div>
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ADMINISTRAÇÃO GERAL</span>
+        <span className="text-sm text-gray-600 font-medium">Olá, {usuarioLogado.nome}</span>
+      </div>
+      <nav className="flex-1 px-4 space-y-2 mt-2">
+        <a href="#" onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/solicitacoes"); }}
+          className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+          <MapPin size={20} /> Solicitações
+        </a>
+        <a href="#" onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/dashboard"); }}
+          className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+          <LayoutDashboard size={20} /> Dashboard
+        </a>
+        <a href="#" onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/perfis"); }}
+          className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+          <Users size={20} /> Gestão de Perfis
+        </a>
+        <a href="#" onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/definicoes"); }}
+          className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors">
+          <Settings size={20} /> Definições
+        </a>
+      </nav>
+      <div className="p-4 border-t border-gray-100">
+        <button onClick={() => { localStorage.removeItem("user_ipora"); navigate("/"); }}
+          className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors w-full">
+          <LogOut size={20} /> Terminar Sessão
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
-      <aside className="w-64 bg-white shadow-md flex flex-col z-10">
-        <div className="p-6 flex flex-col gap-1">
-          <div className="flex justify-center items-center mb-4 mt-2">
-            <img 
-              src={logoAtual} 
-              alt={`Eu amo ${cidadeAdmin} eu cuido`} 
-              className="h-16 w-auto object-contain" 
-            />
-          </div>
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-            ADMINISTRAÇÃO GERAL
-          </span>
-          <span className="text-sm text-gray-600 font-medium">
-            Olá, {usuarioLogado.nome}
-          </span>
-        </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-2">
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate("/solicitacoes"); }} className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            <MapPin size={20} /> Solicitações
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate("/dashboard"); }} className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate("/perfis"); }} className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-            <Users size={20} /> Gestão de Perfis
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate("/definicoes"); }} className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors">
-            <Settings size={20} /> Definições
-          </a>
-        </nav>
-
-        <div className="p-4 border-t border-gray-100">
-          <button onClick={handleLogout} className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors w-full">
-            <LogOut size={20} /> Terminar Sessão
-          </button>
-        </div>
+      <aside className="hidden md:flex w-64 bg-white shadow-md flex-col z-10">
+        <SidebarContent />
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Definições do Sistema</h1>
-            <p className="text-gray-500">Configure a aparência e acessos da plataforma.</p>
+      {menuMobileAberto && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuMobileAberto(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col z-50">
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
+
+      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
+        <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            {/* Hamburger no mobile */}
+            <button
+              className="md:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm text-gray-600 flex-shrink-0"
+              onClick={() => setMenuMobileAberto(true)}
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-800">Definições do Sistema</h1>
+              <p className="text-xs sm:text-sm text-gray-500">Configure a aparência e acessos da plataforma.</p>
+            </div>
           </div>
-          <button onClick={handleSalvar} disabled={isSaving} className="flex items-center gap-2 bg-primary hover:bg-primaryDark text-white px-6 py-3 rounded-lg font-bold shadow-md transition-colors disabled:opacity-50">
-            <Save size={20} />
+          <button onClick={handleSalvar} disabled={isSaving}
+            className="flex items-center gap-2 bg-primary hover:bg-primaryDark text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-bold shadow-md transition-colors disabled:opacity-50 text-sm sm:text-base w-full sm:w-auto justify-center">
+            <Save size={18} />
             {isSaving ? "A guardar..." : "Salvar Alterações"}
           </button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 mb-6 sm:mb-8">
+
           {/* BLOCO 1: POP-UP DE AVISO */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-              <div className="p-2 bg-amber-50 text-amber-500 rounded-lg">
-                <Bell size={24} />
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+              <div className="p-2 bg-amber-50 text-amber-500 rounded-lg flex-shrink-0">
+                <Bell size={22} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-800">Aviso Geral (Pop-up)</h2>
-                <p className="text-sm text-gray-500">Aparece para os cidadãos ao abrir o aplicativo.</p>
+                <h2 className="text-base sm:text-lg font-bold text-gray-800">Aviso Geral (Pop-up)</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Aparece para os cidadãos ao abrir o aplicativo.</p>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-700">Ativar Pop-up no Celular?</span>
-                <label className="relative inline-flex items-center cursor-pointer">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
+                <span className="font-medium text-gray-700 text-sm">Ativar Pop-up no Celular?</span>
+                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                   <input type="checkbox" className="sr-only peer" checked={popUpAtivo} onChange={(e) => setPopUpAtivo(e.target.checked)} />
                   <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                 </label>
               </div>
-              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <span className="font-medium text-gray-700">Mostrar apenas uma vez por pessoa?</span>
-                <label className="relative inline-flex items-center cursor-pointer">
+              <div className="flex items-center justify-between bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
+                <span className="font-medium text-gray-700 text-sm">Mostrar apenas uma vez por pessoa?</span>
+                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                   <input type="checkbox" className="sr-only peer" checked={popUpApenasUmaVez} onChange={(e) => setPopUpApenasUmaVez(e.target.checked)} disabled={!popUpAtivo} />
                   <div className={`w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${!popUpAtivo ? "opacity-50" : "peer-checked:bg-primary"}`}></div>
                 </label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Título do Aviso</label>
-                <input type="text" value={tituloPopUp} onChange={(e) => setTituloPopUp(e.target.value)} placeholder="Ex: Feriado Municipal" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none" disabled={!popUpAtivo} />
+                <input type="text" value={tituloPopUp} onChange={(e) => setTituloPopUp(e.target.value)}
+                  placeholder="Ex: Feriado Municipal"
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" disabled={!popUpAtivo} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-                <textarea rows={3} value={mensagemPopUp} onChange={(e) => setMensagemPopUp(e.target.value)} placeholder="Ex: Informamos que..." className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none resize-none" disabled={!popUpAtivo}></textarea>
+                <textarea rows={3} value={mensagemPopUp} onChange={(e) => setMensagemPopUp(e.target.value)}
+                  placeholder="Ex: Informamos que..."
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none resize-none text-sm" disabled={!popUpAtivo} />
               </div>
             </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-5 sm:space-y-8">
             {/* BLOCO 2: IMAGEM DE FUNDO */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                <div className="p-2 bg-blue-50 text-blue-500 rounded-lg">
-                  <ImageIcon size={24} />
-                </div>
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+                <div className="p-2 bg-blue-50 text-blue-500 rounded-lg flex-shrink-0"><ImageIcon size={22} /></div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-800">Identidade Visual</h2>
-                  <p className="text-sm text-gray-500">Imagem de fundo da tela de Login/Cadastro.</p>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Identidade Visual</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Imagem de fundo da tela de Login/Cadastro.</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Link (URL) da Nova Imagem</label>
-                <input type="text" value={imagemFundoLogin} onChange={(e) => setImagemFundoLogin(e.target.value)} placeholder="http://meusite.com/foto-cidade.jpg" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none mb-3" />
+                <input type="text" value={imagemFundoLogin} onChange={(e) => setImagemFundoLogin(e.target.value)}
+                  placeholder="http://meusite.com/foto-cidade.jpg"
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none mb-2 text-sm" />
                 <p className="text-xs text-gray-500">* Se deixar em branco, o aplicativo usará a imagem padrão.</p>
               </div>
             </div>
 
             {/* BLOCO 3: PRÉ-APROVAÇÃO DE NÚMERO */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                <div className="p-2 bg-purple-50 text-purple-500 rounded-lg">
-                  <UserCheck size={24} />
-                </div>
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+                <div className="p-2 bg-purple-50 text-purple-500 rounded-lg flex-shrink-0"><UserCheck size={22} /></div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-800">Autorizar Número Previamente</h2>
-                  <p className="text-sm text-gray-500">A pessoa se cadastra pelo App e recebe o cargo.</p>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Autorizar Número Previamente</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">A pessoa se cadastra pelo App e recebe o cargo.</p>
                 </div>
               </div>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Celular (Apenas Números)</label>
-                    <input type="text" maxLength={11} value={vipTelefone} onChange={(e) => setVipTelefone(e.target.value.replace(/\D/g, ""))} placeholder="49999999999" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
+                    <input type="text" inputMode="numeric" maxLength={11} value={vipTelefone}
+                      onChange={(e) => setVipTelefone(e.target.value.replace(/\D/g, ""))}
+                      placeholder="49999999999"
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Cargo / Perfil</label>
-                    <select value={vipPerfil} onChange={(e) => { setVipPerfil(e.target.value); setVipSetor(""); }} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
+                    <select value={vipPerfil} onChange={(e) => { setVipPerfil(e.target.value); setVipSetor(""); }}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm bg-white">
                       <option value="CIDADÃO">Cidadão</option>
                       <option value="VEREADOR">Vereador</option>
                       <option value="FUNCIONARIO">Funcionário setor</option>
@@ -371,17 +367,18 @@ export default function Definicoes() {
                     </select>
                   </div>
                 </div>
-
                 {(vipPerfil === "FUNCIONARIO" || vipPerfil === "GESTOR_SETOR") && (
                   <div className="animate-in fade-in slide-in-from-top-2">
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase text-blue-600">Qual o Setor de Atuação?</label>
-                    <select value={vipSetor} onChange={(e) => setVipSetor(e.target.value)} className="w-full p-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-blue-50">
+                    <select value={vipSetor} onChange={(e) => setVipSetor(e.target.value)}
+                      className="w-full p-2.5 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-blue-50">
                       <option value="" disabled>Escolha o setor...</option>
                       {setores.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
                     </select>
                   </div>
                 )}
-                <button onClick={handlePreAprovarNumero} disabled={isAuthorizing} className="w-full mt-2 py-2.5 bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm border border-purple-200">
+                <button onClick={handlePreAprovarNumero} disabled={isAuthorizing}
+                  className="w-full mt-2 py-2.5 bg-purple-100 text-purple-700 hover:bg-purple-200 font-bold rounded-lg transition-colors disabled:opacity-50 text-sm border border-purple-200">
                   {isAuthorizing ? "A autorizar..." : "Pré-aprovar Acesso"}
                 </button>
               </div>
@@ -389,34 +386,40 @@ export default function Definicoes() {
           </div>
         </div>
 
-        {/* CRIAÇÃO DIRETA DE CONTA */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-indigo-50 text-indigo-500 rounded-lg">
-              <UserPlus size={24} />
-            </div>
+        {/* BLOCO 4: CRIAÇÃO DIRETA DE CONTA */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+            <div className="p-2 bg-indigo-50 text-indigo-500 rounded-lg flex-shrink-0"><UserPlus size={22} /></div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800">Criação Direta de Conta (Sem SMS)</h2>
-              <p className="text-sm text-gray-500">Crie a conta completa com senha para pessoas que não recebem SMS ou para uso imediato.</p>
+              <h2 className="text-base sm:text-lg font-bold text-gray-800">Criação Direta de Conta (Sem SMS)</h2>
+              <p className="text-xs sm:text-sm text-gray-500">Crie a conta completa com senha para uso imediato.</p>
             </div>
           </div>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Nome Completo</label>
-                <input type="text" value={diretoNome} onChange={(e) => setDiretoNome(e.target.value)} placeholder="Ex: João da Silva" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                <input type="text" value={diretoNome} onChange={(e) => setDiretoNome(e.target.value)}
+                  placeholder="Ex: João da Silva"
+                  className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Celular (Sem espaços)</label>
-                <input type="text" maxLength={11} value={diretoTelefone} onChange={(e) => setDiretoTelefone(e.target.value.replace(/\D/g, ""))} placeholder="49999999999" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                <input type="text" inputMode="numeric" maxLength={11} value={diretoTelefone}
+                  onChange={(e) => setDiretoTelefone(e.target.value.replace(/\D/g, ""))}
+                  placeholder="49999999999"
+                  className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Senha Inicial</label>
-                <input type="text" value={diretoSenha} onChange={(e) => setDiretoSenha(e.target.value)} placeholder="Senha temporária" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                <input type="text" value={diretoSenha} onChange={(e) => setDiretoSenha(e.target.value)}
+                  placeholder="Senha temporária"
+                  className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Cargo / Perfil</label>
-                <select value={diretoPerfil} onChange={(e) => { setDiretoPerfil(e.target.value); setDiretoSetor(""); }} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                <select value={diretoPerfil} onChange={(e) => { setDiretoPerfil(e.target.value); setDiretoSetor(""); }}
+                  className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
                   <option value="CIDADÃO">Cidadão</option>
                   <option value="VEREADOR">Vereador</option>
                   <option value="FUNCIONARIO">Funcionário Setor</option>
@@ -426,58 +429,54 @@ export default function Definicoes() {
                 </select>
               </div>
             </div>
-
             {(diretoPerfil === "FUNCIONARIO" || diretoPerfil === "GESTOR_SETOR") && (
               <div className="animate-in fade-in">
                 <label className="block text-xs font-bold text-gray-700 mb-1 uppercase text-indigo-600">Qual o Setor de Atuação?</label>
-                <select value={diretoSetor} onChange={(e) => setDiretoSetor(e.target.value)} className="w-full md:w-1/4 p-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-indigo-50">
+                <select value={diretoSetor} onChange={(e) => setDiretoSetor(e.target.value)}
+                  className="w-full sm:w-1/2 lg:w-1/4 p-2.5 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-indigo-50">
                   <option value="" disabled>Escolha o setor...</option>
                   {setores.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
                 </select>
               </div>
             )}
-            
-            <button onClick={handleCriarUsuarioDireto} disabled={isCreatingUser} className="w-full md:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm shadow-md">
+            <button onClick={handleCriarUsuarioDireto} disabled={isCreatingUser}
+              className="w-full sm:w-auto px-5 sm:px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm shadow-md">
               {isCreatingUser ? "A criar conta..." : "Criar Conta Imediata"}
             </button>
           </div>
         </div>
 
-        {/* BLOCO DE SETORES */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-green-50 text-green-500 rounded-lg">
-              <Briefcase size={24} />
-            </div>
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+            <div className="p-2 bg-green-50 text-green-500 rounded-lg flex-shrink-0"><Briefcase size={22} /></div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800">Setores de Atendimento</h2>
-              <p className="text-sm text-gray-500">Estes setores aparecem como botões na tela inicial do Cidadão.</p>
+              <h2 className="text-base sm:text-lg font-bold text-gray-800">Setores de Atendimento</h2>
+              <p className="text-xs sm:text-sm text-gray-500">Estes setores aparecem como botões na tela inicial do Cidadão.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            <div className="md:col-span-2 order-2 md:order-1">
               <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-100 text-gray-600 text-sm">
+                  <thead className="bg-gray-100 text-gray-600 text-xs sm:text-sm">
                     <tr>
-                      <th className="p-3">ID</th>
-                      <th className="p-3">Nome do Setor</th>
-                      <th className="p-3 text-right">Ação</th>
+                      <th className="p-3 font-semibold">ID</th>
+                      <th className="p-3 font-semibold">Nome do Setor</th>
+                      <th className="p-3 font-semibold text-right">Ação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {setores.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="p-4 text-center text-gray-500">Nenhum setor cadastrado.</td>
-                      </tr>
+                      <tr><td colSpan={3} className="p-4 text-center text-gray-500 text-sm">Nenhum setor cadastrado.</td></tr>
                     ) : (
                       setores.map((setor) => (
                         <tr key={setor.id} className="bg-white">
-                          <td className="p-3 text-gray-500">#{setor.id}</td>
-                          <td className="p-3 font-medium text-gray-800">{setor.nome}</td>
+                          <td className="p-3 text-gray-500 text-sm">#{setor.id}</td>
+                          <td className="p-3 font-medium text-gray-800 text-sm">{setor.nome}</td>
                           <td className="p-3 text-right">
-                            <button onClick={() => handleApagarSetor(setor.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
-                              <Trash2 size={18} />
+                            <button onClick={() => handleApagarSetor(setor.id)}
+                              className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                              <Trash2 size={16} />
                             </button>
                           </td>
                         </tr>
@@ -487,21 +486,27 @@ export default function Definicoes() {
                 </table>
               </div>
             </div>
-            <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
-              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Plus size={18} /> Adicionar Novo</h3>
-              <div className="space-y-4">
+            <div className="bg-gray-50 p-4 sm:p-5 rounded-lg border border-gray-200 h-fit order-1 md:order-2">
+              <h3 className="font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base"><Plus size={16} /> Adicionar Novo</h3>
+              <div className="space-y-3 sm:space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Setor</label>
-                  <input type="text" value={novoSetorNome} onChange={(e) => setNovoSetorNome(e.target.value)} placeholder="Ex: Defesa Civil" className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none" />
+                  <input type="text" value={novoSetorNome} onChange={(e) => setNovoSetorNome(e.target.value)}
+                    placeholder="Ex: Defesa Civil"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Link da Imagem (URL)</label>
-                  <input type="text" value={novoSetorIcone} onChange={(e) => setNovoSetorIcone(e.target.value)} placeholder="http://site.com/imagem.png" className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
+                  <input type="text" value={novoSetorIcone} onChange={(e) => setNovoSetorIcone(e.target.value)}
+                    placeholder="http://site.com/imagem.png"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
                 </div>
-                <a className="text-blue-500 hover:text-blue-700 transition-colors block text-sm font-medium text-center" href="https://redimensionador-imagem.vercel.app/" target="_blank" rel="noopener noreferrer">
+                <a className="text-blue-500 hover:text-blue-700 transition-colors block text-xs sm:text-sm font-medium text-center"
+                  href="https://redimensionador-imagem.vercel.app/" target="_blank" rel="noopener noreferrer">
                   Clique aqui para acessar o projeto de redimensionamento e gerar link da imagem.
                 </a>
-                <button onClick={handleAdicionarSetor} disabled={isSavingSetor} className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+                <button onClick={handleAdicionarSetor} disabled={isSavingSetor}
+                  className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm">
                   {isSavingSetor ? "A adicionar..." : "Adicionar Setor"}
                 </button>
               </div>
@@ -509,26 +514,26 @@ export default function Definicoes() {
           </div>
         </div>
 
-        {/* BLOCO DE NOTIFICAÇÕES (PUSH) */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 border-l-4 border-l-red-500">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-red-50 text-red-500 rounded-lg">
-              <Bell size={24} />
-            </div>
+        {/* BLOCO 6: ALERTA DE EMERGÊNCIA */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-6 sm:mb-8 border-l-4 border-l-red-500">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+            <div className="p-2 bg-red-50 text-red-500 rounded-lg flex-shrink-0"><Bell size={22} /></div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800">Alerta de Emergência (Push)</h2>
-              <p className="text-sm text-gray-500">Esta mensagem fará todos os celulares da cidade receberem a notificação.</p>
+              <h2 className="text-base sm:text-lg font-bold text-gray-800">Alerta de Emergência (Push)</h2>
+              <p className="text-xs sm:text-sm text-gray-500">Esta mensagem fará todos os celulares da cidade receberem a notificação.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Título do Alerta</label>
-                <input id="pushTitulo" type="text" placeholder="Ex: Alerta de Tempestade" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" />
+                <input id="pushTitulo" type="text" placeholder="Ex: Alerta de Tempestade"
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-                <textarea id="pushMensagem" rows={3} placeholder="Ex: Evite sair de casa nas próximas 2 horas..." className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none resize-none"></textarea>
+                <textarea id="pushMensagem" rows={3} placeholder="Ex: Evite sair de casa nas próximas 2 horas..."
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none resize-none text-sm" />
               </div>
               <button onClick={async () => {
                 const titulo = (document.getElementById("pushTitulo") as HTMLInputElement).value;
@@ -542,7 +547,7 @@ export default function Definicoes() {
                     (document.getElementById("pushMensagem") as HTMLTextAreaElement).value = "";
                   } catch (error) { console.error(error); alert("Erro ao disparar alertas."); }
                 }
-              }} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-300 shadow-md shadow-red-200">
+              }} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 sm:py-3 px-4 rounded-xl transition-colors duration-300 shadow-md shadow-red-200 text-sm sm:text-base">
                 Disparar Alerta para a Cidade
               </button>
             </div>

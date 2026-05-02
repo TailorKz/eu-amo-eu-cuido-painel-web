@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Filter,
   Send,
+  Menu,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -49,21 +50,17 @@ interface Setor {
   icone: string;
 }
 
-// Tipagem do state recebido via navigate()
 interface LocationState {
   filtroStatus?: string;
   filtroSetor?: string;
   filtroData?: FiltroData;
 }
 
-// ─── Helper de data ───────────────────────────────────────────────────────────
 function toLocalDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 function hoje(): string { return toLocalDateString(new Date()); }
 
-
-// ─── Painel flutuante de filtro de data (idêntico ao do Dashboard) ────────────
 type ModoData = "TOTAL" | "DIA" | "INTERVALO" | "MES_ANO";
 
 function PainelFiltroData({ filtro, onChange, onClose }: {
@@ -79,14 +76,13 @@ function PainelFiltroData({ filtro, onChange, onClose }: {
   ];
 
   return (
-    <div className="absolute left-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 w-80">
+    <div className="absolute left-0 top-full mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-5 w-72 sm:w-80">
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm font-bold text-gray-700">Filtrar por período</span>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
           <X size={18} />
         </button>
       </div>
-
       <div className="grid grid-cols-2 gap-2 mb-4">
         {modos.map((m) => (
           <button key={m.value}
@@ -100,7 +96,6 @@ function PainelFiltroData({ filtro, onChange, onClose }: {
           </button>
         ))}
       </div>
-
       {local.modo === "DIA" && (
         <div className="mb-4">
           <label className="block text-xs font-semibold text-gray-500 mb-1">Selecione o dia</label>
@@ -110,7 +105,6 @@ function PainelFiltroData({ filtro, onChange, onClose }: {
           />
         </div>
       )}
-
       {local.modo === "MES_ANO" && (
         <div className="mb-4">
           <label className="block text-xs font-semibold text-gray-500 mb-1">Mês e ano</label>
@@ -120,7 +114,6 @@ function PainelFiltroData({ filtro, onChange, onClose }: {
           />
         </div>
       )}
-
       {local.modo === "INTERVALO" && (
         <div className="mb-4 space-y-3">
           <div>
@@ -139,7 +132,6 @@ function PainelFiltroData({ filtro, onChange, onClose }: {
           </div>
         </div>
       )}
-
       <button onClick={() => { onChange(local); onClose(); }}
         className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors"
       >
@@ -153,7 +145,6 @@ function PainelFiltroData({ filtro, onChange, onClose }: {
 export default function Solicitacoes() {
   const navigate  = useNavigate();
   const location  = useLocation();
-
   const locationState = (location.state as LocationState) ?? {};
 
   const [chamadosBrutos, setChamadosBrutos] = useState<Chamado[]>([]);
@@ -165,8 +156,8 @@ export default function Solicitacoes() {
   const cidadeAdmin   = usuarioLogado.cidade;
   const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
 
-  const [mensagens, setMensagens]       = useState<MensagemChat[]>([]);
-  const [novaMensagem, setNovaMensagem] = useState("");
+  const [mensagens, setMensagens]         = useState<MensagemChat[]>([]);
+  const [novaMensagem, setNovaMensagem]   = useState("");
   const [isEnviandoMsg, setIsEnviandoMsg] = useState(false);
 
   const logosPorCidade: Record<string, string> = {
@@ -182,6 +173,8 @@ export default function Solicitacoes() {
   const [filtroSetor,  setFiltroSetor]  = useState<string>(locationState.filtroSetor  ?? "");
   const [filtroData,   setFiltroData]   = useState<FiltroData>(locationState.filtroData ?? filtroDataInicial());
   const [painelDataAberto, setPainelDataAberto] = useState(false);
+  // NOVO: menu drawer mobile
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   const [chamadoSelecionado, setChamadoSelecionado] = useState<Chamado | null>(null);
   const [novoStatus,  setNovoStatus]  = useState("");
@@ -203,8 +196,6 @@ export default function Solicitacoes() {
     carregarSetores();
   }, []);
 
-  // ─── Limpeza total ao clicar em "Solicitações" no menu ────────────────────
-  // Detecta quando a página é acessada SEM state (clique direto no menu)
   useEffect(() => {
     if (!location.state) {
       setFiltroStatus("TODOS");
@@ -212,7 +203,7 @@ export default function Solicitacoes() {
       setFiltroData(filtroDataInicial());
       setTermoBusca("");
     }
-  }, [location.key]); // location.key muda a cada navegação
+  }, [location.key]);
 
   const carregarChamados = async () => {
     try {
@@ -245,8 +236,6 @@ export default function Solicitacoes() {
 
   const chamadosFiltrados = useMemo(() => {
     let filtrados = [...chamadosBrutos];
-
-    // Filtro de data
     if (filtroData.modo !== "TOTAL") {
       filtrados = filtrados.filter((c) => {
         if (!c.dataCriacao) return false;
@@ -259,23 +248,17 @@ export default function Solicitacoes() {
         return true;
       });
     }
-
-    // Filtro de status
     if (filtroStatus !== "TODOS") {
       filtrados = filtrados.filter((c) => {
         const s = c.status ? c.status.replace(" ", "_") : "PENDENTE";
         return s === filtroStatus;
       });
     }
-
-    // Filtro de setor (vindo do Dashboard)
     if (filtroSetor.trim() !== "") {
       filtrados = filtrados.filter(
         (c) => c.categoria?.toLowerCase() === filtroSetor.toLowerCase()
       );
     }
-
-    // Busca textual
     if (termoBusca.trim() !== "") {
       const texto = termoBusca.toLowerCase();
       filtrados = filtrados.filter((c) =>
@@ -284,7 +267,6 @@ export default function Solicitacoes() {
         c.categoria?.toLowerCase().includes(texto)
       );
     }
-
     return filtrados;
   }, [chamadosBrutos, termoBusca, filtroData, filtroStatus, filtroSetor]);
 
@@ -392,7 +374,6 @@ export default function Solicitacoes() {
 
   const handleLogout = () => { localStorage.removeItem("user_ipora"); navigate("/"); };
 
-  // ─── Função de limpeza completa de filtros ────────────────────────────────
   const limparTodosFiltros = () => {
     setFiltroStatus("TODOS");
     setFiltroSetor("");
@@ -408,72 +389,98 @@ export default function Solicitacoes() {
 
   const filtroDataAtivo = filtroData.modo !== "TOTAL";
 
+  // ─── Sidebar compartilhado ────────────────────────────────────────────────
+  const SidebarContent = () => (
+    <>
+      <div className="p-6 flex flex-col gap-1">
+        <div className="flex justify-center items-center mb-4 mt-2">
+          <img src={logoAtual} alt={`Eu amo ${cidadeAdmin} eu cuido`} className="h-16 w-auto object-contain" />
+        </div>
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">
+          {isSuperAdmin ? "ADMINISTRAÇÃO GERAL" : `SETOR: ${usuarioLogado.setorAtuacao}`}
+        </span>
+        <span className="text-sm text-gray-600 font-medium text-center">Olá, {usuarioLogado.nome}</span>
+      </div>
+      <nav className="flex-1 px-4 space-y-2 mt-2">
+        <a href="#"
+          onClick={(e) => { e.preventDefault(); limparTodosFiltros(); setMenuMobileAberto(false); navigate("/solicitacoes", { replace: true }); }}
+          className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors"
+        >
+          <MapPin size={20} /> Solicitações
+        </a>
+        <a href="#"
+          onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/dashboard"); }}
+          className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          <LayoutDashboard size={20} /> Dashboard
+        </a>
+        {isSuperAdmin && (
+          <>
+            <a href="#"
+              onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/perfis"); }}
+              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Users size={20} /> Gestão de Perfis
+            </a>
+            <a href="#"
+              onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/definicoes"); }}
+              className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Settings size={20} /> Definições
+            </a>
+          </>
+        )}
+      </nav>
+      <div className="p-4 border-t border-gray-100">
+        <button onClick={handleLogout}
+          className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors w-full"
+        >
+          <LogOut size={20} /> Terminar Sessão
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
-      {/* MENU LATERAL */}
-      <aside className="w-64 bg-white shadow-md flex flex-col z-10">
-        <div className="p-6 flex flex-col gap-1">
-          <div className="flex justify-center items-center mb-4 mt-2">
-            <img src={logoAtual} alt={`Eu amo ${cidadeAdmin} eu cuido`} className="h-16 w-auto object-contain" />
-          </div>
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">
-            {isSuperAdmin ? "ADMINISTRAÇÃO GERAL" : `SETOR: ${usuarioLogado.setorAtuacao}`}
-          </span>
-          <span className="text-sm text-gray-600 font-medium text-center">Olá, {usuarioLogado.nome}</span>
-        </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-2">
-          {/* ✅ Clicar em Solicitações limpa todos os filtros e navega sem state */}
-          <a href="#"
-            onClick={(e) => { e.preventDefault(); limparTodosFiltros(); navigate("/solicitacoes", { replace: true }); }}
-            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <MapPin size={20} /> Solicitações
-          </a>
-          <a href="#"
-            onClick={(e) => { e.preventDefault(); navigate("/dashboard"); }}
-            className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          {isSuperAdmin && (
-            <>
-              <a href="#"
-                onClick={(e) => { e.preventDefault(); navigate("/perfis"); }}
-                className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <Users size={20} /> Gestão de Perfis
-              </a>
-              <a href="#"
-                onClick={(e) => { e.preventDefault(); navigate("/definicoes"); }}
-                className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <Settings size={20} /> Definições
-              </a>
-            </>
-          )}
-        </nav>
-        <div className="p-4 border-t border-gray-100">
-          <button onClick={handleLogout}
-            className="flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors w-full"
-          >
-            <LogOut size={20} /> Terminar Sessão
-          </button>
-        </div>
+      {/* ── SIDEBAR DESKTOP ──────────────────────────────────────────────── */}
+      <aside className="hidden md:flex w-64 bg-white shadow-md flex-col z-10">
+        <SidebarContent />
       </aside>
 
-      {/* TABELA */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-8 flex flex-col gap-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">
-                {isSuperAdmin ? "Todas as Solicitações" : `Chamados: ${usuarioLogado.setorAtuacao}`}
-              </h1>
-              <p className="text-gray-500">Administre e responda aos chamados da população.</p>
-            </div>
+      {/* ── DRAWER MOBILE ────────────────────────────────────────────────── */}
+      {menuMobileAberto && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuMobileAberto(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl flex flex-col z-50">
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
+
+      {/* ── TABELA PRINCIPAL ─────────────────────────────────────────────── */}
+      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
+        <header className="mb-5 sm:mb-8 flex flex-col gap-3 sm:gap-4">
+          <div className="flex justify-between items-start gap-3">
             <div className="flex items-center gap-3">
-              {/* Botão limpar filtros — aparece só quando há filtro ativo */}
+              {/* Hamburger — só mobile */}
+              <button
+                className="md:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm text-gray-600 flex-shrink-0"
+                onClick={() => setMenuMobileAberto(true)}
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h1 className="text-lg sm:text-3xl font-bold text-gray-800">
+                  {isSuperAdmin ? "Todas as Solicitações" : `Chamados: ${usuarioLogado.setorAtuacao}`}
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-500">Administre e responda aos chamados da população.</p>
+              </div>
+            </div>
+
+            {/* Busca — só desktop (md+) */}
+            <div className="hidden md:flex items-center gap-3">
               {temFiltroAtivo && (
                 <button onClick={limparTodosFiltros}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-sm font-semibold transition-colors border border-gray-200"
@@ -494,31 +501,50 @@ export default function Solicitacoes() {
             </div>
           </div>
 
-          {/* BARRA DE FILTROS */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Busca mobile — linha separada abaixo do header */}
+          <div className="flex md:hidden items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={termoBusca}
+                onChange={(e) => setTermoBusca(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-full shadow-sm text-sm"
+              />
+            </div>
+            {temFiltroAtivo && (
+              <button onClick={limparTodosFiltros}
+                className="flex items-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold transition-colors border border-gray-200 whitespace-nowrap"
+              >
+                <X size={13} /> Limpar
+              </button>
+            )}
+          </div>
 
-            {/* ✅ Filtro de data — painel flutuante igual ao Dashboard */}
+          {/* BARRA DE FILTROS */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Filtro de data */}
             <div className="relative">
               <button
                 onClick={() => setPainelDataAberto((v) => !v)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border text-xs sm:text-sm font-semibold
                   transition-all shadow-sm
                   ${filtroDataAtivo
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"}`}
               >
-                <CalendarDays size={16} />
-                <span>{labelFiltroData(filtroData)}</span>
+                <CalendarDays size={14} />
+                <span className="max-w-[100px] sm:max-w-none truncate">{labelFiltroData(filtroData)}</span>
                 {filtroDataAtivo && (
                   <span
                     onClick={(e) => { e.stopPropagation(); setFiltroData(filtroDataInicial()); }}
                     className="ml-1 hover:opacity-70 transition-opacity"
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </span>
                 )}
               </button>
-
               {painelDataAberto && (
                 <PainelFiltroData
                   filtro={filtroData}
@@ -529,43 +555,42 @@ export default function Solicitacoes() {
             </div>
 
             {/* Filtro de status */}
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm">
-              <Filter size={16} className="text-gray-400" />
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <Filter size={14} className="text-gray-400 flex-shrink-0" />
               <select
                 value={filtroStatus}
                 onChange={(e) => setFiltroStatus(e.target.value)}
-                className="bg-transparent border-none text-gray-700 font-semibold outline-none cursor-pointer text-sm"
+                className="bg-transparent border-none text-gray-700 font-semibold outline-none cursor-pointer text-xs sm:text-sm"
               >
-                <option value="TODOS">Todos os Status</option>
+                <option value="TODOS">Todos</option>
                 <option value="PENDENTE">Pendentes</option>
-                <option value="EM_ANDAMENTO">Em Andamento</option>
+                <option value="EM_ANDAMENTO">Andamento</option>
                 <option value="RESOLVIDO">Resolvidos</option>
               </select>
             </div>
 
-            {/* Banner de setor filtrado (vindo do Dashboard) */}
+            {/* Banner de setor filtrado */}
             {filtroSetor && (
-              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
-                <span className="text-sm text-blue-700 font-semibold">
-                  Setor: <strong>{filtroSetor}</strong>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5">
+                <span className="text-xs sm:text-sm text-blue-700 font-semibold truncate max-w-[120px] sm:max-w-none">
+                  <span className="hidden sm:inline">Setor: </span><strong>{filtroSetor}</strong>
                 </span>
-                <button
-                  onClick={() => setFiltroSetor("")}
-                  className="text-blue-400 hover:text-blue-700 transition-colors"
-                >
-                  <X size={14} />
+                <button onClick={() => setFiltroSetor("")} className="text-blue-400 hover:text-blue-700 transition-colors flex-shrink-0">
+                  <X size={13} />
                 </button>
               </div>
             )}
 
             {/* Contador */}
-            <span className="text-sm text-gray-400 font-medium ml-1">
+            <span className="text-xs sm:text-sm text-gray-400 font-medium">
               {chamadosFiltrados.length} encontrados
             </span>
           </div>
         </header>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* ── TABELA DESKTOP / CARDS MOBILE ────────────────────────────── */}
+
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -606,63 +631,96 @@ export default function Solicitacoes() {
             </table>
           </div>
         </div>
+
+        <div className="md:hidden flex flex-col gap-3">
+          {isLoading ? (
+            <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">A carregar dados...</div>
+          ) : chamadosFiltrados.length === 0 ? (
+            <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">Nenhuma solicitação encontrada.</div>
+          ) : (
+            chamadosFiltrados.map((chamado) => (
+              <button
+                key={chamado.id}
+                onClick={() => abrirDetalhes(chamado)}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left w-full hover:shadow-md transition-shadow active:scale-[0.99]"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-xs font-bold text-gray-400">{chamado.protocolo || `#${chamado.id}`}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex-shrink-0 ${
+                    chamado.status === "RESOLVIDO"    ? "bg-green-100 text-green-700" :
+                    chamado.status === "EM_ANDAMENTO" ? "bg-yellow-100 text-yellow-700" :
+                                                        "bg-red-100 text-red-700"}`}>
+                    {chamado.status ? chamado.status.replace("_", " ") : "PENDENTE"}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-gray-800 mb-1">{chamado.categoria}</p>
+                <p className="text-xs text-gray-500 truncate mb-2">{chamado.localizacao}</p>
+                <p className="text-[11px] text-gray-400">{formatarData(chamado.dataCriacao)}</p>
+              </button>
+            ))
+          )}
+        </div>
       </main>
 
-      {/* MODAL DE DETALHES — idêntico ao original, mantido completo */}
       {chamadoSelecionado && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-200">
+
+            {/* Header do modal */}
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-100 bg-gray-50 flex-shrink-0">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-800">
                   {chamadoSelecionado.protocolo ? `Protocolo ${chamadoSelecionado.protocolo}` : `Solicitação #${chamadoSelecionado.id}`}
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">Enviado em: {formatarData(chamadoSelecionado.dataCriacao)}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Enviado em: {formatarData(chamadoSelecionado.dataCriacao)}</p>
               </div>
               <button onClick={() => setChamadoSelecionado(null)}
-                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0"
               >
-                <X size={24} />
+                <X size={22} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              {/* Em mobile: coluna única. Em lg: 2 colunas */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+
+                {/* COLUNA ESQUERDA */}
+                <div className="space-y-5 sm:space-y-6">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <ImageIcon size={16} /> Foto do Local
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
+                      <ImageIcon size={14} /> Foto do Local
                     </h3>
-                    <div className="w-full h-64 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center">
+                    <div className="w-full h-48 sm:h-64 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center">
                       {getImagemUrl(chamadoSelecionado.urlImagem) ? (
                         <Zoom>
-                          <img src={getImagemUrl(chamadoSelecionado.urlImagem) as string} alt="Foto do Problema" className="w-full h-64 object-cover" />
+                          <img src={getImagemUrl(chamadoSelecionado.urlImagem) as string} alt="Foto do Problema" className="w-full h-48 sm:h-64 object-cover" />
                         </Zoom>
                       ) : (
-                        <span className="text-gray-400 flex flex-col items-center py-20">
-                          <ImageIcon size={32} className="mb-2" /> Sem imagem anexada
+                        <span className="text-gray-400 flex flex-col items-center py-12 sm:py-20">
+                          <ImageIcon size={28} className="mb-2" /> Sem imagem anexada
                         </span>
                       )}
                     </div>
                   </div>
                   {chamadoSelecionado.urlImagemResolvida && (
-                    <div className="mt-6">
-                      <h3 className="text-sm font-bold text-green-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <ImageIcon size={16} /> Foto da Resolução (Funcionário)
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold text-green-600 uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
+                        <ImageIcon size={14} /> Foto da Resolução
                       </h3>
                       <div className="w-full bg-green-50 rounded-xl overflow-hidden border border-green-200">
                         <Zoom>
-                          <img src={getImagemUrl(chamadoSelecionado.urlImagemResolvida) as string} alt="Foto da Resolução" className="w-full h-64 object-cover" />
+                          <img src={getImagemUrl(chamadoSelecionado.urlImagemResolvida) as string} alt="Foto da Resolução" className="w-full h-48 sm:h-64 object-cover" />
                         </Zoom>
                       </div>
                     </div>
                   )}
                   <div>
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <MapPin size={16} /> Localização Informada
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
+                      <MapPin size={14} /> Localização Informada
                     </h3>
-                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3">{chamadoSelecionado.localizacao}</p>
-                    <div className="w-full h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3 text-sm">{chamadoSelecionado.localizacao}</p>
+                    <div className="w-full h-40 sm:h-48 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
                       <iframe width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen
                         src={`https://maps.google.com/maps?q=${
                           chamadoSelecionado.latitude && chamadoSelecionado.longitude
@@ -674,36 +732,37 @@ export default function Solicitacoes() {
                   </div>
                 </div>
 
-                <div className="space-y-6 flex flex-col">
+                {/* COLUNA DIREITA */}
+                <div className="space-y-5 sm:space-y-6 flex flex-col">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <MessageSquare size={16} /> Observação do Cidadão
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
+                      <MessageSquare size={14} /> Observação do Cidadão
                     </h3>
-                    <p className="text-gray-700 bg-blue-50/50 p-4 rounded-xl border border-blue-100 italic">
+                    <p className="text-gray-700 bg-blue-50/50 p-3 sm:p-4 rounded-xl border border-blue-100 italic text-sm">
                       "{chamadoSelecionado.observacao || "Nenhuma observação informada."}"
                     </p>
                   </div>
 
-                  <div className="border-t border-gray-100 pt-6">
-                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <Users size={16} /> Dados do Solicitante
+                  <div className="border-t border-gray-100 pt-4 sm:pt-6">
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
+                      <Users size={14} /> Dados do Solicitante
                     </h3>
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                      <p className="text-gray-800 font-bold text-lg">{chamadoSelecionado.cidadao?.nome || "Cidadão não identificado"}</p>
-                      <p className="text-gray-600">{chamadoSelecionado.cidadao?.telefone || "Sem contato"}</p>
+                    <div className="bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200">
+                      <p className="text-gray-800 font-bold text-base sm:text-lg">{chamadoSelecionado.cidadao?.nome || "Cidadão não identificado"}</p>
+                      <p className="text-gray-600 text-sm">{chamadoSelecionado.cidadao?.telefone || "Sem contato"}</p>
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-100 pt-6">
-                    <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <MessageSquare size={16} /> Chat com o Cidadão
+                  <div className="border-t border-gray-100 pt-4 sm:pt-6">
+                    <h3 className="text-xs sm:text-sm font-bold text-primary uppercase tracking-wider mb-2 sm:mb-3 flex items-center gap-2">
+                      <MessageSquare size={14} /> Chat com o Cidadão
                     </h3>
-                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-80 shadow-sm">
-                      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 scroll-smooth">
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col h-64 sm:h-80 shadow-sm">
+                      <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50/50 scroll-smooth">
                         {mensagens.length === 0 ? (
                           <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                            <MessageSquare size={32} className="mb-2 opacity-50" />
-                            <p className="italic text-sm">Nenhuma mensagem no histórico.</p>
+                            <MessageSquare size={28} className="mb-2 opacity-50" />
+                            <p className="italic text-xs sm:text-sm">Nenhuma mensagem no histórico.</p>
                             <p className="text-xs">Tire dúvidas do cidadão por aqui!</p>
                           </div>
                         ) : (
@@ -714,7 +773,7 @@ export default function Solicitacoes() {
                                 <span className={`text-[11px] font-bold tracking-wide mb-1 ${isPrefeitura ? "text-primary" : "text-gray-500"}`}>
                                   {isPrefeitura ? "🏢 Você" : "👤 Cidadão"}
                                 </span>
-                                <div className={`p-3 rounded-2xl text-sm shadow-sm ${isPrefeitura ? "bg-primary text-white rounded-tr-none" : "bg-white border border-gray-200 text-gray-800 rounded-tl-none"}`}>
+                                <div className={`p-2.5 sm:p-3 rounded-2xl text-xs sm:text-sm shadow-sm ${isPrefeitura ? "bg-primary text-white rounded-tr-none" : "bg-white border border-gray-200 text-gray-800 rounded-tl-none"}`}>
                                   {msg.texto}
                                 </div>
                                 <span className="text-[10px] text-gray-400 mt-1 font-medium">
@@ -725,28 +784,28 @@ export default function Solicitacoes() {
                           })
                         )}
                       </div>
-                      <div className="p-3 bg-white border-t border-gray-200 flex gap-3 items-center">
+                      <div className="p-2.5 sm:p-3 bg-white border-t border-gray-200 flex gap-2 sm:gap-3 items-center">
                         <input type="text" placeholder="Escreva uma mensagem..." value={novaMensagem}
                           onChange={(e) => setNovaMensagem(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && handleEnviarMensagemChat()}
-                          className="flex-1 px-4 py-2.5 bg-gray-100 border-transparent rounded-full focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                          className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 border-transparent rounded-full focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs sm:text-sm"
                         />
                         <button onClick={handleEnviarMensagemChat} disabled={isEnviandoMsg || !novaMensagem.trim()}
-                          className="bg-primary hover:bg-primaryDark text-white w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 shadow-md"
+                          className="bg-primary hover:bg-primaryDark text-white w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 shadow-md flex-shrink-0"
                         >
-                          {isEnviandoMsg ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send size={18} className="-ml-1" />}
+                          {isEnviandoMsg ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send size={16} className="-ml-0.5" />}
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-100 pt-6">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Ações do Setor</h3>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="border-t border-gray-100 pt-4 sm:pt-6">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Ações do Setor</h3>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Status da Solicitação</label>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Status</label>
                         <select value={novoStatus} onChange={(e) => setNovoStatus(e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                          className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm"
                         >
                           <option value="PENDENTE">Pendente</option>
                           <option value="EM ANDAMENTO">Em Andamento</option>
@@ -754,41 +813,41 @@ export default function Solicitacoes() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Transferir Setor</label>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Transferir Setor</label>
                         <select value={novoSetor} onChange={(e) => setNovoSetor(e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                          className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm"
                         >
-                          <option value="" disabled>Selecione um setor...</option>
+                          <option value="" disabled>Selecione...</option>
                           {setoresDaCidade.map((s) => <option key={s.id} value={s.nome}>{s.nome}</option>)}
                         </select>
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Resposta Oficial</label>
-                      <textarea rows={4} value={novaResposta} onChange={(e) => setNovaResposta(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Resposta Oficial</label>
+                      <textarea rows={3} value={novaResposta} onChange={(e) => setNovaResposta(e.target.value)}
+                        className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="mt-auto flex flex-col gap-3 pt-6 border-t border-gray-100">
-                    <div className="flex gap-3">
+                  <div className="mt-auto flex flex-col gap-2 sm:gap-3 pt-4 sm:pt-6 border-t border-gray-100">
+                    <div className="flex gap-2 sm:gap-3">
                       <button onClick={() => setChamadoSelecionado(null)}
-                        className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                        className="flex-1 py-2.5 sm:py-3 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors text-sm"
                       >
                         Cancelar
                       </button>
                       <button onClick={handleSalvarAtualizacao} disabled={isSaving}
-                        className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-xl hover:bg-primaryDark transition-colors disabled:opacity-50"
+                        className="flex-1 py-2.5 sm:py-3 px-4 bg-primary text-white font-bold rounded-xl hover:bg-primaryDark transition-colors disabled:opacity-50 text-sm"
                       >
-                        {isSaving ? "A guardar..." : "Salvar Alterações"}
+                        {isSaving ? "A guardar..." : "Salvar"}
                       </button>
                     </div>
                     {isSuperAdmin && (
                       <button onClick={handleExcluirChamado} disabled={isSaving}
-                        className="w-full py-3 px-4 bg-white border border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 mt-2"
+                        className="w-full py-2.5 sm:py-3 px-4 bg-white border border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
                       >
-                        Excluir Solicitação Permanentemente
+                        Excluir Permanentemente
                       </button>
                     )}
                   </div>

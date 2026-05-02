@@ -72,7 +72,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl flex w-full max-w-4xl overflow-hidden">
-        {/* LADO ESQUERDO */}
         <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-blue-100 to-primary p-12 text-white">
           
           <img 
@@ -90,7 +89,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* LADO DIREITO */}
         <div className="w-full md:w-1/2 p-8 md:p-12">
           <div className="mb-8 text-center md:text-left">
             <h2 className="text-3xl font-bold text-gray-800">Bem-vindo</h2>
