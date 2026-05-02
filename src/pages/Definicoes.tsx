@@ -85,7 +85,6 @@ export default function Definicoes() {
     }
   };
 
-  // 🔴 ROTA CORRIGIDA: Usa exatamente o endpoint que sabemos que funciona!
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
@@ -119,7 +118,7 @@ export default function Definicoes() {
     }
   };
 
-  // FUNÇÃO 1: PRÉ-APROVAR (Apenas Número e Cargo)
+  // PRÉ-APROVAR (Apenas Número e Cargo)
   const handlePreAprovarNumero = async () => {
     if (!vipTelefone || vipTelefone.length < 11) return alert("Preencha corretamente o número de celular (11 dígitos)!");
     if ((vipPerfil === "FUNCIONARIO" || vipPerfil === "GESTOR_SETOR") && !vipSetor) return alert("Selecione o Setor de Atuação.");
@@ -150,7 +149,7 @@ export default function Definicoes() {
     }
   };
 
-  // FUNÇÃO 2: CRIAR CONTA COMPLETA DIRETO (Com Senha, ignora SMS)
+  // RIAR CONTA COMPLETA DIRETO (Com Senha, ignora SMS)
   const handleCriarUsuarioDireto = async () => {
     if (!diretoNome || !diretoTelefone || !diretoSenha) return alert("Preencha o Nome, Celular e Senha Inicial!");
     if (diretoTelefone.length < 11) return alert("O telefone deve ter 11 dígitos.");
@@ -499,6 +498,9 @@ export default function Definicoes() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Link da Imagem (URL)</label>
                   <input type="text" value={novoSetorIcone} onChange={(e) => setNovoSetorIcone(e.target.value)} placeholder="http://site.com/imagem.png" className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
                 </div>
+                <a className="text-blue-500 hover:text-blue-700 transition-colors block text-sm font-medium text-center" href="https://redimensionador-imagem.vercel.app/" target="_blank" rel="noopener noreferrer">
+                  Clique aqui para acessar o projeto de redimensionamento e gerar link da imagem.
+                </a>
                 <button onClick={handleAdicionarSetor} disabled={isSavingSetor} className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
                   {isSavingSetor ? "A adicionar..." : "Adicionar Setor"}
                 </button>
