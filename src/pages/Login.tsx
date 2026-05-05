@@ -83,8 +83,8 @@ export default function Login() {
           <h1 className="text-4xl font-bold mb-4 text-center">
             Painel de Gestão
           </h1>
-          <p className="text-center text-blue-100 text-lg">
-            O cuidado com a sua cidade na palma da sua mão. Central de
+          <p className="text-center text-blue-50 text-lg">
+            O cuidado com a cidade na palma da sua mão. Central de
             administração e controle.
           </p>
         </div>

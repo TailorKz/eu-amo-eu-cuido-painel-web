@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -25,6 +25,7 @@ interface Usuario {
   perfil: string;
   setorAtuacao: string | null;
   bloqueado?: boolean;
+  dataCadastro?: string;
 }
 
 interface Setor {
@@ -51,25 +52,28 @@ export default function GestaoPerfis() {
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filtroData, setFiltroData] = useState("novo-antigo");
   const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
   const [termoBusca, setTermoBusca] = useState("");
 
   const [usuarioSelecionado, setUsuarioSelecionado] = useState<Usuario | null>(null);
   const [novoPerfil, setNovoPerfil] = useState("");
-  const [novoSetor, setNovoSetor] = useState("");
+  
+  const [novoSetor, setNovoSetor] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addTelefone, setAddTelefone] = useState("");
   const [addPerfil, setAddPerfil] = useState("FUNCIONARIO");
-  const [addSetor, setAddSetor] = useState(isSuperAdmin ? "" : meuSetor);
+  
+  // O setor no modal de adicionar também é um Array
+  const [addSetor, setAddSetor] = useState<string[]>(isSuperAdmin ? [] : [meuSetor]);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // NOVO: menu drawer mobile
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   useEffect(() => {
-    if (!usuarioLogado.id || !isSuperAdmin) {
+    if (!usuarioLogado.id || (!isSuperAdmin && !isGestor)) {
       navigate("/solicitacoes");
       return;
     }
@@ -90,6 +94,54 @@ export default function GestaoPerfis() {
     }
   };
 
+  const converterData = (data: string | number[] | undefined | null) => {
+    if (!data) return 0;
+    if (Array.isArray(data)) {
+      return new Date(data[0], data[1] - 1, data[2], data[3] || 0, data[4] || 0).getTime();
+    }
+    const parsed = new Date(data).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const usuariosFiltrados = useMemo(() => {
+    let lista = [...usuarios];
+
+    lista = lista.filter((u) => {
+      const nomeSeguro = u.nome || "Pendente";
+      const telefoneSeguro = u.telefone || "";
+      const matchBusca =
+        nomeSeguro.toLowerCase().includes(termoBusca.toLowerCase()) ||
+        telefoneSeguro.includes(termoBusca);
+      
+      if (isSuperAdmin) return matchBusca;
+      
+      // Ajuste: O Gestor agora verifica se o seu setor está "incluído" no texto
+      const noMeuSetor = u.setorAtuacao ? u.setorAtuacao.includes(meuSetor) : false;
+      const isCidadao = !u.perfil || u.perfil === "CIDADÃO";
+      return matchBusca && (noMeuSetor || isCidadao);
+    });
+
+    if (filtroData === "ultimo-mes") {
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+      const tempoLimite = trintaDiasAtras.getTime();
+      
+      lista = lista.filter((user) => {
+        const tempoUser = converterData(user.dataCadastro);
+        return tempoUser > 0 && tempoUser >= tempoLimite; 
+      });
+    }
+
+    lista.sort((a, b) => {
+      const tempoA = converterData(a.dataCadastro);
+      const tempoB = converterData(b.dataCadastro);
+      if (filtroData === "antigo-novo") return tempoA - tempoB;
+      return tempoB - tempoA;
+    });
+
+    return lista;
+  }, [usuarios, filtroData, termoBusca, isSuperAdmin, meuSetor]);
+
   const carregarSetores = async () => {
     try {
       const response = await axios.get(
@@ -104,11 +156,38 @@ export default function GestaoPerfis() {
   const abrirDetalhes = (usuario: Usuario) => {
     if (!isSuperAdmin && usuario.perfil === "SUPER_ADMIN")
       return alert("Acesso negado. Utilizador de nível superior.");
-    if (!isSuperAdmin && usuario.perfil === "GESTOR_SETOR" && usuario.setorAtuacao !== meuSetor)
-      return alert("Não pode editar um gestor de outro setor.");
+    
+    // Ajuste: O Gestor só pode editar se o seu setor estiver na lista do funcionário
+    if (!isSuperAdmin && usuario.perfil === "GESTOR_SETOR" && (!usuario.setorAtuacao || !usuario.setorAtuacao.includes(meuSetor)))
+      return alert("Não pode editar um gestor que não pertence ao seu setor.");
+    
     setUsuarioSelecionado(usuario);
     setNovoPerfil(usuario.perfil || "CIDADÃO");
-    setNovoSetor(usuario.setorAtuacao || (isSuperAdmin ? "" : meuSetor));
+
+    // Converte o texto separado por vírgulas que vem do Java num Array
+    if (usuario.setorAtuacao) {
+      setNovoSetor(usuario.setorAtuacao.split(",").map(s => s.trim()));
+    } else {
+      setNovoSetor(isSuperAdmin ? [] : [meuSetor]);
+    }
+  };
+
+  // Função para marcar/desmarcar checkboxes do modal de edição
+  const toggleNovoSetor = (setorNome: string) => {
+    setNovoSetor(prev => 
+      prev.includes(setorNome) 
+        ? prev.filter(s => s !== setorNome) 
+        : [...prev, setorNome]
+    );
+  };
+
+  // Função para marcar/desmarcar checkboxes do modal de adicionar
+  const toggleAddSetor = (setorNome: string) => {
+    setAddSetor(prev => 
+      prev.includes(setorNome) 
+        ? prev.filter(s => s !== setorNome) 
+        : [...prev, setorNome]
+    );
   };
 
   const handleSalvarPerfil = async () => {
@@ -116,9 +195,12 @@ export default function GestaoPerfis() {
     setIsSaving(true);
     try {
       const url = `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/${usuarioSelecionado.id}/perfil`;
+      
+      // Junta o array novamente numa string com vírgulas para o Java
       const setorFinal =
         novoPerfil === "CIDADÃO" || novoPerfil === "SUPER_ADMIN" || novoPerfil === "VEREADOR"
-          ? null : novoSetor;
+          ? null : novoSetor.join(", ");
+          
       await axios.put(url, {
         perfil: novoPerfil === "CIDADÃO" ? null : novoPerfil,
         setorAtuacao: setorFinal,
@@ -176,14 +258,20 @@ export default function GestaoPerfis() {
   const handleAdicionarMembro = async () => {
     if (!addTelefone || addTelefone.length < 11)
       return alert("Preencha corretamente o número de celular (11 dígitos)!");
-    if (!addSetor) return alert("Selecione o Setor de Atuação.");
+    if (addSetor.length === 0) return alert("Selecione pelo menos um Setor de Atuação.");
+    
     setIsCreatingUser(true);
     try {
-      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/promover-por-telefone?telefone=${addTelefone}&cidade=${cidadeAdmin}&perfil=${addPerfil}&setorAtuacao=${addSetor}`;
+      // Transforma o Array em String e usa o encodeURIComponent para ser seguro enviar pela URL
+      const setoresConcatenados = encodeURIComponent(addSetor.join(", "));
+      const url = `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/promover-por-telefone?telefone=${addTelefone}&cidade=${cidadeAdmin}&perfil=${addPerfil}&setorAtuacao=${setoresConcatenados}`;
+      
       await axios.put(url);
-      alert(`O utilizador foi adicionado com sucesso à equipa: ${addSetor}!`);
+      alert(`O utilizador foi adicionado com sucesso à equipe!`);
       setIsAddModalOpen(false);
       setAddTelefone("");
+      // Limpa os setores do modal
+      setAddSetor(isSuperAdmin ? [] : [meuSetor]);
       carregarUsuarios();
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -208,18 +296,6 @@ export default function GestaoPerfis() {
       default: return "bg-gray-100 text-gray-700";
     }
   };
-
-  const usuariosFiltrados = usuarios.filter((u) => {
-    const nomeSeguro = u.nome || "Pendente";
-    const telefoneSeguro = u.telefone || "";
-    const matchBusca =
-      nomeSeguro.toLowerCase().includes(termoBusca.toLowerCase()) ||
-      telefoneSeguro.includes(termoBusca);
-    if (isSuperAdmin) return matchBusca;
-    const noMeuSetor = u.setorAtuacao === meuSetor;
-    const isCidadao = !u.perfil || u.perfil === "CIDADÃO";
-    return matchBusca && (noMeuSetor || isCidadao);
-  });
 
   const SidebarContent = () => (
     <>
@@ -265,7 +341,6 @@ export default function GestaoPerfis() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
-
       <aside className="hidden md:flex w-64 bg-white shadow-md flex-col z-10">
         <SidebarContent />
       </aside>
@@ -281,6 +356,7 @@ export default function GestaoPerfis() {
 
       <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
         <header className="mb-5 sm:mb-8 flex flex-col gap-3 sm:gap-4">
+          
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="flex items-center gap-3">
               <button
@@ -294,17 +370,33 @@ export default function GestaoPerfis() {
                   {isSuperAdmin ? "Controle de Acessos" : `Equipe: ${meuSetor}`}
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-500">
-                  {isSuperAdmin ? "Defina cargos, permissões e bloqueios." : "Atribua cidadãos já registados à sua equipa."}
+                  {isSuperAdmin ? "Defina cargos, permissões e bloqueios." : "Atribua cidadãos já registados à sua equipe."}
+                </p>
+                <p className="text-sm font-semibold text-primary mt-1">
+                  Exibindo {usuariosFiltrados.length} utilizadores
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:flex-none">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              
+              <div className="w-full sm:w-auto bg-white border border-gray-200 rounded-lg shadow-sm flex items-center pr-2">
+                 <select
+                    value={filtroData}
+                    onChange={(e) => setFiltroData(e.target.value)}
+                    className="w-full p-2 bg-transparent text-sm text-gray-600 outline-none cursor-pointer"
+                  >
+                    <option value="novo-antigo">Mais recentes primeiro</option>
+                    <option value="antigo-novo">Mais antigos primeiro</option>
+                    <option value="ultimo-mes">Apenas do último mês</option>
+                 </select>
+              </div>
+
+              <div className="relative w-full sm:w-auto flex-1 sm:flex-none">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
-                  placeholder="Buscar por nome..."
+                  placeholder="Buscar por nome ou número..."
                   value={termoBusca}
                   onChange={(e) => setTermoBusca(e.target.value)}
                   className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-64 shadow-sm text-sm"
@@ -312,7 +404,7 @@ export default function GestaoPerfis() {
               </div>
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-1.5 sm:gap-2 bg-primary text-white px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-primaryDark transition-colors shadow-sm text-sm whitespace-nowrap"
+                className="w-full sm:w-auto flex justify-center items-center gap-1.5 sm:gap-2 bg-primary text-white px-3 sm:px-4 py-2 rounded-lg font-bold hover:bg-primaryDark transition-colors shadow-sm text-sm whitespace-nowrap"
               >
                 <UserPlus size={16} />
                 <span className="hidden sm:inline">Adicionar Membro</span>
@@ -334,7 +426,7 @@ export default function GestaoPerfis() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td colSpan={4} className="p-8 text-center text-gray-500">A carregar equipa...</td></tr>
+                <tr><td colSpan={4} className="p-8 text-center text-gray-500">A carregar usuários...</td></tr>
               ) : usuariosFiltrados.length === 0 ? (
                 <tr><td colSpan={4} className="p-8 text-center text-gray-500">Nenhum utilizador encontrado.</td></tr>
               ) : (
@@ -367,7 +459,7 @@ export default function GestaoPerfis() {
 
         <div className="md:hidden flex flex-col gap-3">
           {isLoading ? (
-            <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">A carregar equipa...</div>
+            <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">A carregar usuários...</div>
           ) : usuariosFiltrados.length === 0 ? (
             <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">Nenhum utilizador encontrado.</div>
           ) : (
@@ -401,8 +493,8 @@ export default function GestaoPerfis() {
       {/* ── MODAL ADICIONAR MEMBRO ────────────────────────────────────────── */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-200">
-            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100 bg-gray-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-200 max-h-[90vh]">
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100 bg-gray-50 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <UserPlus className="text-primary" size={22} />
                 <h2 className="text-lg sm:text-xl font-bold text-gray-800">
@@ -414,7 +506,7 @@ export default function GestaoPerfis() {
                 <X size={22} />
               </button>
             </div>
-            <div className="p-5 sm:p-6 space-y-4">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto">
               <p className="text-sm text-gray-500">
                 Digite o número de quem já usa o aplicativo para promovê-lo a Colaborador ou Gestor.
               </p>
@@ -435,21 +527,35 @@ export default function GestaoPerfis() {
                   <option value="PREFEITO">Prefeito (Visão Global)</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Setor de Atuação</label>
-                <select value={addSetor} onChange={(e) => setAddSetor(e.target.value)} disabled={!isSuperAdmin}
-                  className={`w-full p-3 border rounded-lg outline-none text-sm ${!isSuperAdmin ? "bg-gray-100 border-gray-200 text-gray-500" : "bg-white border-gray-300 focus:ring-2 focus:ring-primary"}`}>
-                  {!isSuperAdmin ? (
-                    <option value={meuSetor}>{meuSetor}</option>
-                  ) : (
-                    <>
-                      <option value="" disabled>Selecione...</option>
-                      {setoresDaCidade.map((s) => <option key={s.id} value={s.nome}>{s.nome}</option>)}
-                    </>
-                  )}
-                </select>
-              </div>
-              <button onClick={handleAdicionarMembro} disabled={isCreatingUser}
+
+              {/* Seleção Múltipla de Setores (Adicionar) */}
+              {addPerfil !== "PREFEITO" && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-2 uppercase">Setores de Atuação</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                    {!isSuperAdmin ? (
+                      <label className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-80 cursor-not-allowed">
+                        <input type="checkbox" checked disabled className="w-4 h-4 text-primary rounded" />
+                        <span className="text-sm text-gray-700 font-medium truncate">{meuSetor}</span>
+                      </label>
+                    ) : (
+                      setoresDaCidade.map((setor) => (
+                        <label key={setor.id} className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${addSetor.includes(setor.nome) ? 'bg-primary/5 border-primary/30' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                          <input 
+                            type="checkbox" 
+                            checked={addSetor.includes(setor.nome)} 
+                            onChange={() => toggleAddSetor(setor.nome)}
+                            className="w-4 h-4 text-primary rounded focus:ring-primary" 
+                          />
+                          <span className="text-sm text-gray-700 font-medium truncate">{setor.nome}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={handleAdicionarMembro} disabled={isCreatingUser || (addPerfil !== "PREFEITO" && addSetor.length === 0)}
                 className="w-full mt-2 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primaryDark transition-colors disabled:opacity-50 text-sm">
                 {isCreatingUser ? "A processar..." : "Salvar Membro"}
               </button>
@@ -498,24 +604,35 @@ export default function GestaoPerfis() {
                   {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin (Acesso Total)</option>}
                 </select>
 
+                {/* Seleção Múltipla de Setores (Editar) */}
                 {(novoPerfil === "FUNCIONARIO" || novoPerfil === "GESTOR_SETOR") && (
                   <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Setor de Atuação</label>
-                    <select value={novoSetor} onChange={(e) => setNovoSetor(e.target.value)} disabled={!isSuperAdmin}
-                      className={`w-full p-3 border rounded-lg outline-none text-sm ${!isSuperAdmin ? "bg-gray-100 border-gray-200 text-gray-500" : "bg-white border-gray-300 focus:ring-2 focus:ring-primary"}`}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Setores de Atuação</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
                       {!isSuperAdmin ? (
-                        <option value={meuSetor}>{meuSetor}</option>
+                        <label className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded-lg opacity-80 cursor-not-allowed">
+                          <input type="checkbox" checked disabled className="w-4 h-4 text-primary rounded" />
+                          <span className="text-sm text-gray-700 font-medium truncate">{meuSetor}</span>
+                        </label>
                       ) : (
-                        <>
-                          <option value="" disabled>Selecione um setor...</option>
-                          {setoresDaCidade.map((setor) => <option key={setor.id} value={setor.nome}>{setor.nome}</option>)}
-                        </>
+                        setoresDaCidade.map((setor) => (
+                          <label key={setor.id} className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-colors ${novoSetor.includes(setor.nome) ? 'bg-primary/5 border-primary/30' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                            <input 
+                              type="checkbox" 
+                              checked={novoSetor.includes(setor.nome)} 
+                              onChange={() => toggleNovoSetor(setor.nome)}
+                              className="w-4 h-4 text-primary rounded focus:ring-primary" 
+                            />
+                            <span className="text-sm text-gray-700 font-medium truncate">{setor.nome}</span>
+                          </label>
+                        ))
                       )}
-                    </select>
+                    </div>
                   </div>
                 )}
+                
                 <button onClick={handleSalvarPerfil}
-                  disabled={isSaving || ((novoPerfil === "FUNCIONARIO" || novoPerfil === "GESTOR_SETOR") && !novoSetor)}
+                  disabled={isSaving || ((novoPerfil === "FUNCIONARIO" || novoPerfil === "GESTOR_SETOR") && novoSetor.length === 0)}
                   className="w-full mt-4 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primaryDark transition-colors disabled:opacity-50 text-sm">
                   {isSaving ? "A guardar..." : "Salvar Permissões"}
                 </button>
