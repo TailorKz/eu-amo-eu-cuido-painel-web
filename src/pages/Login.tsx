@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-// Removi o Building2 dos imports, já que agora usaremos a sua imagem
+import React, { useState, useEffect } from "react"; // <-- Adicionado useEffect aqui
 import { Lock, Phone, MapPin } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -8,14 +7,53 @@ export default function Login() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  // Agora começa vazio (ou com a cidade principal)
-  const [cidade, setCidade] = useState("Iporã do Oeste");
+  const [cidade, setCidade] = useState(""); // <-- Agora começa vazio para forçar a escolha
   const [isLoading, setIsLoading] = useState(false);
 
-  // LISTA DE CIDADES
-  const cidadesAtendidas = [
-    "Iporã do Oeste",
-  ];
+  // ESTADOS DINÂMICOS
+  const [cidadesAtendidas, setCidadesAtendidas] = useState<string[]>([]);
+  const [logoDinamica, setLogoDinamica] = useState<string | null>(null);
+
+  // 1. Efeito para carregar a lista de cidades do Java
+  useEffect(() => {
+    const carregarCidades = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || "https://tailorkz-production-eu-amo.up.railway.app"}/api/configuracoes/todas`
+        );
+        if (response.data && response.data.length > 0) {
+          setCidadesAtendidas(response.data); // <-- Typo corrigido
+        } else {
+          setCidadesAtendidas(["Iporã do Oeste"]); // Fallback
+        }
+      } catch (error) {
+        console.error("Erro ao buscar cidades:", error);
+        setCidadesAtendidas(["Iporã do Oeste"]); // Fallback de segurança
+      }
+    };
+    carregarCidades();
+  }, []);
+
+  // 2. Efeito para carregar o Logo da cidade assim que ela for selecionada
+  useEffect(() => {
+    const buscarLogoCidade = async () => {
+      if (!cidade) return;
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || "https://tailorkz-production-eu-amo.up.railway.app"}/api/configuracoes?cidade=${encodeURIComponent(cidade)}`
+        );
+        if (response.data && response.data.logoUrl) {
+          setLogoDinamica(response.data.logoUrl);
+        } else {
+          setLogoDinamica(null); 
+        }
+      } catch (error) {
+        console.error("Erro ao carregar logo:", error); // <-- Erro agora é utilizado
+        setLogoDinamica(null);
+      }
+    };
+    buscarLogoCidade();
+  }, [cidade]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,9 +113,10 @@ export default function Login() {
         <div className="hidden md:flex flex-col justify-center items-center w-1/2 bg-gradient-to-br from-blue-100 to-primary p-12 text-white">
           
           <img 
-            src="/logos/logoeuamo.png" 
+            // <-- AQUI: Usa a logo da cidade escolhida, ou a padrão se não tiver
+            src={logoDinamica || "/logos/logoeuamo.png"} 
             alt="Logo Eu Amo Eu Cuido" 
-            className="w-64 mb-6 drop-shadow-md object-contain"
+            className="w-64 mb-6 drop-shadow-md object-contain max-h-48"
           />
           
           <h1 className="text-4xl font-bold mb-4 text-center">
@@ -108,14 +147,15 @@ export default function Login() {
                   <MapPin className="h-5 w-5 text-gray-400" />
                 </div>
                 <select
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none bg-white"
                   value={cidade}
                   onChange={(e) => setCidade(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
                   required
                 >
-                  {cidadesAtendidas.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
+                  <option value="">Selecione sua cidade</option>
+                  {cidadesAtendidas.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
                     </option>
                   ))}
                 </select>

@@ -32,6 +32,12 @@ export default function Definicoes() {
   const cidadeAdmin = usuarioLogado.cidade;
 
   const [imagemFundoLogin, setImagemFundoLogin] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [brasaoUrl, setBrasaoUrl] = useState("");
+  
+  const [latitudeCentro, setLatitudeCentro] = useState<number | "">("");
+  const [longitudeCentro, setLongitudeCentro] = useState<number | "">("");
+  const [raioAtendimentoKm, setRaioAtendimentoKm] = useState<number | "">("");
   const [tituloPopUp, setTituloPopUp] = useState("");
   const [mensagemPopUp, setMensagemPopUp] = useState("");
   const [popUpAtivo, setPopUpAtivo] = useState(false);
@@ -70,10 +76,17 @@ export default function Definicoes() {
   const carregarConfiguracoes = async () => {
     try {
       const response = await axios.get(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeAdmin}`,
+        `${import.meta.env.VITE_API_URL || "https://tailorkz-production-eu-amo.up.railway.app"}/api/configuracoes?cidade=${cidadeAdmin}`
       );
       const config = response.data;
       setImagemFundoLogin(config.imagemFundoLogin || "");
+      setLogoUrl(config.logoUrl || "");
+      setBrasaoUrl(config.brasaoUrl || "");
+      
+      setLatitudeCentro(config.latitudeCentro ?? "");
+      setLongitudeCentro(config.longitudeCentro ?? "");
+      setRaioAtendimentoKm(config.raioAtendimentoKm ?? "");
+
       setTituloPopUp(config.tituloPopUp || "");
       setMensagemPopUp(config.mensagemPopUp || "");
       setPopUpAtivo(config.popUpAtivo || false);
@@ -98,8 +111,14 @@ export default function Definicoes() {
     setIsSaving(true);
     try {
       await axios.put(
-        `https://tailorkz-production-eu-amo.up.railway.app/api/configuracoes?cidade=${cidadeAdmin}`,
-        { imagemFundoLogin, tituloPopUp, mensagemPopUp, popUpAtivo, popUpApenasUmaVez },
+        `${import.meta.env.VITE_API_URL || "https://tailorkz-production-eu-amo.up.railway.app"}/api/configuracoes?cidade=${cidadeAdmin}`,
+        { 
+          imagemFundoLogin, logoUrl, brasaoUrl,
+          latitudeCentro: latitudeCentro !== "" ? Number(latitudeCentro) : null,
+          longitudeCentro: longitudeCentro !== "" ? Number(longitudeCentro) : null,
+          raioAtendimentoKm: raioAtendimentoKm !== "" ? Number(raioAtendimentoKm) : null,
+          tituloPopUp, mensagemPopUp, popUpAtivo, popUpApenasUmaVez 
+        }
       );
       alert("Configurações globais guardadas com sucesso!");
     } catch (error) {
@@ -323,16 +342,58 @@ export default function Definicoes() {
               <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
                 <div className="p-2 bg-blue-50 text-blue-500 rounded-lg flex-shrink-0"><ImageIcon size={22} /></div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Identidade Visual</h2>
-                  <p className="text-xs sm:text-sm text-gray-500">Imagem de fundo da tela de Login/Cadastro.</p>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Identidade Visual da Cidade</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Logos e imagens utilizadas na aplicação.</p>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Link (URL) da Nova Imagem</label>
-                <input type="text" value={imagemFundoLogin} onChange={(e) => setImagemFundoLogin(e.target.value)}
-                  placeholder="http://meusite.com/foto-cidade.jpg"
-                  className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none mb-2 text-sm" />
-                <p className="text-xs text-gray-500">* Se deixar em branco, o aplicativo usará a imagem padrão.</p>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Link do Logo Principal (URL)</label>
+                  <input type="text" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="Ex: http://site.com/logo.png"
+                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Link do Brasão (URL)</label>
+                  <input type="text" value={brasaoUrl} onChange={(e) => setBrasaoUrl(e.target.value)}
+                    placeholder="Ex: http://site.com/brasao.png"
+                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Imagem de Fundo (App Mobile)</label>
+                  <input type="text" value={imagemFundoLogin} onChange={(e) => setImagemFundoLogin(e.target.value)}
+                    placeholder="Ex: http://site.com/fundo.jpg"
+                    className="w-full p-2.5 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm" />
+                </div>
+              </div>
+
+              {/* SESSÃO GEOFENCING */}
+              <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100 mt-6">
+                <div className="p-2 bg-emerald-50 text-emerald-500 rounded-lg flex-shrink-0"><MapPin size={22} /></div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Cerca Virtual (Geofencing)</h2>
+                  <p className="text-xs sm:text-sm text-gray-500">Limite a área onde os cidadãos podem abrir chamados.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Latitude Central</label>
+                  <input type="number" step="any" value={latitudeCentro} onChange={(e) => setLatitudeCentro(e.target.value ? Number(e.target.value) : "")}
+                    placeholder="-26.9877"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Longitude Central</label>
+                  <input type="number" step="any" value={longitudeCentro} onChange={(e) => setLongitudeCentro(e.target.value ? Number(e.target.value) : "")}
+                    placeholder="-53.5350"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Raio Máx. (Km)</label>
+                  <input type="number" step="any" value={raioAtendimentoKm} onChange={(e) => setRaioAtendimentoKm(e.target.value ? Number(e.target.value) : "")}
+                    placeholder="25"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm" />
+                </div>
               </div>
             </div>
 
