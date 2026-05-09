@@ -154,6 +154,34 @@ export default function Solicitacoes() {
   const isSuperAdmin  = usuarioLogado.perfil === "SUPER_ADMIN";
   const isPrefeito    = usuarioLogado.perfil === "PREFEITO";
   const cidadeAdmin   = usuarioLogado.cidade;
+  //  NOVO: Atualização Silenciosa do Painel Web
+  useEffect(() => {
+    const silentRefreshWeb = async () => {
+      const localData = JSON.parse(localStorage.getItem("user_ipora") || "{}");
+      if (!localData.token) return;
+
+      try {
+        const response = await axios.get(
+          "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/refresh",
+          { headers: { Authorization: `Bearer ${localData.token}` } }
+        );
+
+        const newData = response.data;
+
+       
+        if (localData.perfil !== newData.perfil || localData.setorAtuacao !== newData.setorAtuacao) {
+          localStorage.setItem("user_ipora", JSON.stringify(newData));
+          window.location.reload(); // Recarrega suavemente para aplicar permissões
+        } else {
+          localStorage.setItem("user_ipora", JSON.stringify(newData));
+        }
+      } catch (error) {
+        console.log("Sessão expirada ou erro no refresh invisível.", error);
+      }
+    };
+
+    silentRefreshWeb();
+  }, []);
   const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
 
   const [mensagens, setMensagens]         = useState<MensagemChat[]>([]);
