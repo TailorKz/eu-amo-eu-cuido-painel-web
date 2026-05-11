@@ -22,7 +22,10 @@ export default function Login() {
           `${import.meta.env.VITE_API_URL || "https://tailorkz-production-eu-amo.up.railway.app"}/api/configuracoes/todas`
         );
         if (response.data && response.data.length > 0) {
-          setCidadesAtendidas(response.data); // <-- Typo corrigido
+          // --- FILTRO CIRÚRGICO ---
+          // Remove cidades que venham vazias ou apenas com espaços
+          const cidadesLimpas = response.data.filter((c: string) => c && c.trim() !== "");
+          setCidadesAtendidas(cidadesLimpas.length > 0 ? cidadesLimpas : ["Iporã do Oeste"]);
         } else {
           setCidadesAtendidas(["Iporã do Oeste"]); // Fallback
         }
@@ -48,12 +51,24 @@ export default function Login() {
           setLogoDinamica(null); 
         }
       } catch (error) {
-        console.error("Erro ao carregar logo:", error); // <-- Erro agora é utilizado
+        console.error("Erro ao carregar logo:", error);
         setLogoDinamica(null);
       }
     };
     buscarLogoCidade();
   }, [cidade]);
+
+  // verifica se já está logado e entrar direto!
+  useEffect(() => {
+    const storageUser = localStorage.getItem("user_ipora");
+    if (storageUser) {
+      const user = JSON.parse(storageUser);
+      // Se existir um token válido na memória, vai para o painel
+      if (user && user.token) {
+        navigate("/solicitacoes");
+      }
+    }
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
