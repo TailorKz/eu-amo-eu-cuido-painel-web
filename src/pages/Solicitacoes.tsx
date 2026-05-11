@@ -162,7 +162,7 @@ export default function Solicitacoes() {
 
       try {
         const response = await axios.get(
-          "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/refresh",
+          `https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/${localData.id}/refresh`,
           { headers: { Authorization: `Bearer ${localData.token}` } }
         );
 
