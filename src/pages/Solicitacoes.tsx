@@ -184,6 +184,23 @@ export default function Solicitacoes() {
   }, []);
   const [setoresDaCidade, setSetoresDaCidade] = useState<Setor[]>([]);
 
+  // --- NOTIFICAÇÕES (MÁGICA DO APP PARA A WEB) ---
+  const [chamadosNovos, setChamadosNovos] = useState<number[]>([]);
+  const [chamadosComMensagem, setChamadosComMensagem] = useState<number[]>([]);
+
+  const buscarMensagensNaoLidas = async () => {
+    if (!usuarioLogado?.id) return;
+    try {
+      const response = await axios.get(
+        `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/nao-lidas/${usuarioLogado.id}`
+      );
+      setChamadosNovos(response.data.novos || []);
+      setChamadosComMensagem(response.data.mensagens || []);
+    } catch (error) {
+      console.log("Erro ao buscar não lidas:", error);
+    }
+  };
+
   const [mensagens, setMensagens]         = useState<MensagemChat[]>([]);
   const [novaMensagem, setNovaMensagem]   = useState("");
   const [isEnviandoMsg, setIsEnviandoMsg] = useState(false);
@@ -222,6 +239,13 @@ export default function Solicitacoes() {
     if (!usuarioLogado.id) { navigate("/"); return; }
     carregarChamados();
     carregarSetores();
+    buscarMensagensNaoLidas();
+
+    // Radar automático: busca notificações novas de 10 em 10 segundos
+    const radar = setInterval(() => {
+      buscarMensagensNaoLidas();
+    }, 10000);
+    return () => clearInterval(radar);
   }, []);
 
   useEffect(() => {
@@ -313,12 +337,25 @@ export default function Solicitacoes() {
     return urlOriginal.replace("file:///C:/ipora_imagens/", "https://tailorkz-production-eu-amo.up.railway.app/imagens/");
   };
 
-  const abrirDetalhes = (chamado: Chamado) => {
+  const abrirDetalhes = async (chamado: Chamado) => {
     setChamadoSelecionado(chamado);
     setNovoStatus(chamado.status);
     setNovoSetor(chamado.categoria);
     setNovaResposta(chamado.resposta || "");
     carregarMensagens(chamado.id);
+
+    // Marca como lido e tira os selos visualmente na mesma hora
+    if (usuarioLogado?.id) {
+      try {
+        await axios.post(
+          `https://tailorkz-production-eu-amo.up.railway.app/api/solicitacoes/${chamado.id}/marcar-lido/${usuarioLogado.id}`
+        );
+        setChamadosNovos((prev) => prev.filter((id) => id !== chamado.id));
+        setChamadosComMensagem((prev) => prev.filter((id) => id !== chamado.id));
+      } catch (error) {
+        console.log("Erro ao marcar lido no painel:", error);
+      }
+    }
   };
 
   const carregarMensagens = async (solicitacaoId: number) => {
@@ -418,7 +455,10 @@ export default function Solicitacoes() {
   const filtroDataAtivo = filtroData.modo !== "TOTAL";
 
   // ─── Sidebar compartilhado ────────────────────────────────────────────────
-  const SidebarContent = () => (
+  const SidebarContent = () => {
+    const totalNotificacoes = chamadosNovos.length + chamadosComMensagem.length;
+    
+    return (
     <>
       <div className="p-6 flex flex-col gap-1">
         <div className="flex justify-center items-center mb-4 mt-2">
@@ -432,9 +472,17 @@ export default function Solicitacoes() {
       <nav className="flex-1 px-4 space-y-2 mt-2">
         <a href="#"
           onClick={(e) => { e.preventDefault(); limparTodosFiltros(); setMenuMobileAberto(false); navigate("/solicitacoes", { replace: true }); }}
-          className="flex items-center gap-3 p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors"
+          className="flex items-center justify-between p-3 bg-blue-50 text-primary rounded-lg font-medium transition-colors"
         >
-          <MapPin size={20} /> Solicitações
+          <div className="flex items-center gap-3">
+            <MapPin size={20} /> Solicitações
+          </div>
+          {/* A Bolinha de Total de Notificações */}
+          {totalNotificacoes > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+              {totalNotificacoes}
+            </span>
+          )}
         </a>
         <a href="#"
           onClick={(e) => { e.preventDefault(); setMenuMobileAberto(false); navigate("/dashboard"); }}
@@ -467,7 +515,8 @@ export default function Solicitacoes() {
         </button>
       </div>
     </>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
@@ -636,11 +685,25 @@ export default function Solicitacoes() {
                 ) : chamadosFiltrados.length === 0 ? (
                   <tr><td colSpan={5} className="p-8 text-center text-gray-500">Nenhuma solicitação encontrada para estes filtros.</td></tr>
                 ) : (
-                  chamadosFiltrados.map((chamado) => (
+                  chamadosFiltrados.map((chamado) => {
+                    const isNovo = chamadosNovos.includes(chamado.id);
+                    const temMensagem = chamadosComMensagem.includes(chamado.id);
+                    
+                    return (
                     <tr key={chamado.id} onClick={() => abrirDetalhes(chamado)}
-                      className="hover:bg-blue-50 cursor-pointer transition-colors"
+                      className={`cursor-pointer transition-colors ${isNovo || temMensagem ? "bg-blue-50/40 hover:bg-blue-50" : "hover:bg-gray-50"}`}
                     >
-                      <td className="p-4 text-gray-500 font-bold whitespace-nowrap">{chamado.protocolo || `#${chamado.id}`}</td>
+                      <td className="p-4 text-gray-500 font-bold whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {chamado.protocolo || `#${chamado.id}`}
+                          {isNovo && (
+                            <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">NOVO</span>
+                          )}
+                          {!isNovo && temMensagem && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">1</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-4 text-gray-800">{formatarData(chamado.dataCriacao)}</td>
                       <td className="p-4 font-medium text-gray-800">{chamado.categoria}</td>
                       <td className="p-4 text-gray-600 truncate max-w-xs">{chamado.localizacao}</td>
@@ -653,7 +716,7 @@ export default function Solicitacoes() {
                         </span>
                       </td>
                     </tr>
-                  ))
+                  ); })
                 )}
               </tbody>
             </table>
@@ -665,15 +728,29 @@ export default function Solicitacoes() {
             <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">A carregar dados...</div>
           ) : chamadosFiltrados.length === 0 ? (
             <div className="bg-white rounded-xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">Nenhuma solicitação encontrada.</div>
-          ) : (
-            chamadosFiltrados.map((chamado) => (
+         ) : (
+            chamadosFiltrados.map((chamado) => {
+              const isNovo = chamadosNovos.includes(chamado.id);
+              const temMensagem = chamadosComMensagem.includes(chamado.id);
+              
+              return (
               <button
                 key={chamado.id}
                 onClick={() => abrirDetalhes(chamado)}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-left w-full hover:shadow-md transition-shadow active:scale-[0.99]"
+                className={`bg-white rounded-xl shadow-sm p-4 text-left w-full hover:shadow-md transition-all active:scale-[0.99] ${
+                  isNovo || temMensagem ? "border-2 border-blue-600" : "border border-gray-100"
+                }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="text-xs font-bold text-gray-400">{chamado.protocolo || `#${chamado.id}`}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-400">{chamado.protocolo || `#${chamado.id}`}</span>
+                    {isNovo && (
+                      <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">NOVO</span>
+                    )}
+                    {!isNovo && temMensagem && (
+                      <span className="bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">1</span>
+                    )}
+                  </div>
                   <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex-shrink-0 ${
                     chamado.status === "RESOLVIDO"    ? "bg-green-100 text-green-700" :
                     chamado.status === "EM_ANDAMENTO" ? "bg-yellow-100 text-yellow-700" :
@@ -685,7 +762,7 @@ export default function Solicitacoes() {
                 <p className="text-xs text-gray-500 truncate mb-2">{chamado.localizacao}</p>
                 <p className="text-[11px] text-gray-400">{formatarData(chamado.dataCriacao)}</p>
               </button>
-            ))
+            ); })
           )}
         </div>
       </main>
