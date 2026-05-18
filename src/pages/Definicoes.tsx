@@ -48,6 +48,7 @@ export default function Definicoes() {
   const [novoSetorNome, setNovoSetorNome] = useState("");
   const [novoSetorIcone, setNovoSetorIcone] = useState("");
   const [isSavingSetor, setIsSavingSetor] = useState(false);
+  const [setorEmEdicao, setSetorEmEdicao] = useState<number | null>(null);
 
   const [vipTelefone, setVipTelefone] = useState("");
   const [vipPerfil, setVipPerfil] = useState("CIDADÃO");
@@ -181,19 +182,42 @@ export default function Definicoes() {
     }
   };
 
-  const handleAdicionarSetor = async () => {
+  const handleEditarSetor = (setor: Setor) => {
+    setSetorEmEdicao(setor.id);
+    setNovoSetorNome(setor.nome);
+    setNovoSetorIcone(setor.icone);
+  };
+
+  const handleCancelarEdicao = () => {
+    setSetorEmEdicao(null);
+    setNovoSetorNome("");
+    setNovoSetorIcone("");
+  };
+
+  const handleSalvarSetor = async () => {
     if (!novoSetorNome || !novoSetorIcone) return alert("Preencha o nome e o link da imagem do setor.");
     setIsSavingSetor(true);
     try {
-      await axios.post(
-        "https://tailorkz-production-eu-amo.up.railway.app/api/setores",
-        { nome: novoSetorNome, icone: novoSetorIcone, cidade: cidadeAdmin },
-      );
-      setNovoSetorNome(""); setNovoSetorIcone("");
+      if (setorEmEdicao) {
+        // Se estiver em edição, faz um PUT (Atualizar)
+        await axios.put(`https://tailorkz-production-eu-amo.up.railway.app/api/setores/${setorEmEdicao}`, {
+          nome: novoSetorNome,
+          icone: novoSetorIcone,
+          cidade: cidadeAdmin
+        });
+      } else {
+        // Se não, faz um POST (Criar novo)
+        await axios.post("https://tailorkz-production-eu-amo.up.railway.app/api/setores", {
+          nome: novoSetorNome,
+          icone: novoSetorIcone,
+          cidade: cidadeAdmin
+        });
+      }
+      handleCancelarEdicao();
       carregarSetores();
     } catch (error) {
       console.error(error);
-      alert("Erro ao adicionar setor.");
+      alert("Erro ao salvar setor.");
     } finally {
       setIsSavingSetor(false);
     }
@@ -535,6 +559,10 @@ export default function Definicoes() {
                           <td className="p-3 text-gray-500 text-sm">#{setor.id}</td>
                           <td className="p-3 font-medium text-gray-800 text-sm">{setor.nome}</td>
                           <td className="p-3 text-right">
+                            <button onClick={() => handleEditarSetor(setor)}
+                              className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2">
+                              <Settings size={16} />
+                            </button>
                             <button onClick={() => handleApagarSetor(setor.id)}
                               className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
                               <Trash2 size={16} />
@@ -566,10 +594,18 @@ export default function Definicoes() {
                   href="https://redimensionador-imagem.vercel.app/" target="_blank" rel="noopener noreferrer">
                   Clique aqui para acessar o projeto de redimensionamento e gerar link da imagem.
                 </a>
-                <button onClick={handleAdicionarSetor} disabled={isSavingSetor}
-                  className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm">
-                  {isSavingSetor ? "A adicionar..." : "Adicionar Setor"}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={handleSalvarSetor} disabled={isSavingSetor}
+                    className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm">
+                    {isSavingSetor ? "A salvar..." : (setorEmEdicao ? "Salvar Edição" : "Adicionar Setor")}
+                  </button>
+                  {setorEmEdicao && (
+                    <button onClick={handleCancelarEdicao}
+                      className="py-2.5 px-4 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold rounded-lg transition-colors text-sm">
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
