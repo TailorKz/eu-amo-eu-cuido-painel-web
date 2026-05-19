@@ -62,7 +62,12 @@ export default function Definicoes() {
   const [diretoSetor, setDiretoSetor] = useState("");
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
-  // NOVO: menu drawer mobile
+  const [novaCidadeNome, setNovaCidadeNome] = useState("");
+  const [novaCidadeTelefone, setNovaCidadeTelefone] = useState("");
+  const [novaCidadeSenha, setNovaCidadeSenha] = useState("");
+  const [isCreatingCidade, setIsCreatingCidade] = useState(false);
+
+  // menu drawer mobile
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   useEffect(() => {
@@ -181,6 +186,53 @@ export default function Definicoes() {
       setIsCreatingUser(false);
     }
   };
+// --- MÁGICA SAAS: CRIA A CIDADE E O ADMIN INICIAL ---
+  const handleCriarNovaCidadeSaaS = async () => {
+    if (!novaCidadeNome || !novaCidadeTelefone || !novaCidadeSenha) {
+      return alert("Preencha o Nome da Cidade, o Celular do Novo Gestor e a Senha Inicial!");
+    }
+    if (novaCidadeTelefone.length < 11) {
+      return alert("O telefone deve ter 11 dígitos.");
+    }
+    
+    if (!window.confirm(`Confirma a implantação da prefeitura de ${novaCidadeNome}?`)) return;
+
+    setIsCreatingCidade(true);
+    try {
+      // Cria a Configuração Base. Isto regista a cidade no banco e faz ela aparecer no App/Web
+      await axios.put(
+        `${import.meta.env.VITE_API_URL || "https://tailorkz-production-eu-amo.up.railway.app"}/api/configuracoes?cidade=${novaCidadeNome}`,
+        {
+          imagemFundoLogin: "", logoUrl: "", brasaoUrl: "",
+          latitudeCentro: null, longitudeCentro: null, raioAtendimentoKm: null,
+          tituloPopUp: "Bem-vindo!", mensagemPopUp: "Sistema em implantação.",
+          popUpAtivo: false, popUpApenasUmaVez: true
+        }
+      );
+
+      // 2. Cria a conta inicial de SUPER_ADMIN atrelada exclusivamente a nova cidade
+      await axios.post(
+        "https://tailorkz-production-eu-amo.up.railway.app/api/cidadaos/admin-criar",
+        {
+          nome: "Admin " + novaCidadeNome, 
+          telefone: novaCidadeTelefone, 
+          senha: novaCidadeSenha, 
+          cidade: novaCidadeNome,
+          perfil: "SUPER_ADMIN",
+          setorAtuacao: null
+        }
+      );
+
+      alert(`✅ Sucesso! A infraestrutura para "${novaCidadeNome}" foi criada. Você já pode terminar a sessão e fazer o primeiro login usando as credenciais desta nova prefeitura.`);
+      setNovaCidadeNome(""); setNovaCidadeTelefone(""); setNovaCidadeSenha("");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao criar a nova cidade. Verifique se esse número de telefone já não possui conta.");
+    } finally {
+      setIsCreatingCidade(false);
+    }
+  };
+
 
   const handleEditarSetor = (setor: Setor) => {
     setSetorEmEdicao(setor.id);
@@ -610,6 +662,46 @@ export default function Definicoes() {
             </div>
           </div>
         </div>
+
+        {/* BLOCO 5: IMPLANTAÇÃO DE NOVA CIDADE (SAAS) */}
+        {isSuperAdmin && (
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-6 sm:mb-8 border-l-4 border-l-emerald-500">
+            <div className="flex items-center gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg flex-shrink-0"><MapPin size={22} /></div>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-gray-800">Implantar Nova Cidade</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Crie um novo ambiente isolado no banco de dados para uma nova prefeitura cliente.</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Nome Exato da Cidade</label>
+                  <input type="text" value={novaCidadeNome} onChange={(e) => setNovaCidadeNome(e.target.value)}
+                    placeholder="Ex: São Miguel do Oeste"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Celular do Novo Gestor</label>
+                  <input type="text" inputMode="numeric" maxLength={11} value={novaCidadeTelefone}
+                    onChange={(e) => setNovaCidadeTelefone(e.target.value.replace(/\D/g, ""))}
+                    placeholder="49999999999"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Senha de Acesso Inicial</label>
+                  <input type="text" value={novaCidadeSenha} onChange={(e) => setNovaCidadeSenha(e.target.value)}
+                    placeholder="Senha do novo admin"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm" />
+                </div>
+              </div>
+              <button onClick={handleCriarNovaCidadeSaaS} disabled={isCreatingCidade}
+                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm shadow-md">
+                {isCreatingCidade ? "A preparar infraestrutura..." : "Implantar Nova Cidade"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* BLOCO 6: ALERTA DE EMERGÊNCIA */}
         <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 mb-6 sm:mb-8 border-l-4 border-l-red-500">
